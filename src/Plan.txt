@@ -1,0 +1,9 @@
+Create Class for each generator type
+	-update(dt)
+	-calculatePixel(index)
+
+For Particle
+	Iterate over each particle and manipulate only the pixels within a certain range of influence
+	Allows for performance compromise with high particle simulations
+	Each pixel will keep a reference of the 4 closest particles
+	Bilinear interpolation can be used 
