@@ -28,7 +28,8 @@ struct Database
   GradientGenerator gradientGenerator; //Database will only store the active preset and palette. It is up to the browser to send the correct information
   ParticleGenerator particleGenerator;
   Palette palette;
-  genType gen = GRADIENT;
+  genType gen = PARTICLE;
+  NeoPixelAnimator animator = NeoPixelAnimator(1);
 };
 
 Database DB;

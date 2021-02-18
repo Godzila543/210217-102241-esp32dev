@@ -1,8 +1,8 @@
 // Constants
-const char *ssid = "NETGEAR80";
-const char *password =  "thelmarocks";
-//const char *ssid = "MONKEY";
-//const char *password =  "teddybear";
+// const char *ssid = "NETGEAR80";
+// const char *password = "thelmarocks";
+const char *ssid = "MONKEY";
+const char *password = "teddybear";
 const int dns_port = 53;
 const int http_port = 80;
 const int ws_port = 1337;
@@ -19,82 +19,99 @@ char in_buf[1024];
 // Callback: receiving any WebSocket message
 void onWebSocketEvent(uint8_t client_num,
                       WStype_t type,
-                      uint8_t * payload,
-                      size_t length) {
+                      uint8_t *payload,
+                      size_t length)
+{
 
   // Figure out the type of WebSocket event
-  switch (type) {
+  switch (type)
+  {
 
-    // Client has disconnected
-    case WStype_DISCONNECTED:
-      Serial.printf("[%u] Disconnected!\n", client_num);
-      break;
+  // Client has disconnected
+  case WStype_DISCONNECTED:
+    Serial.printf("[%u] Disconnected!\n", client_num);
+    break;
 
-    // New client has connected
-    case WStype_CONNECTED:
+  // New client has connected
+  case WStype_CONNECTED:
+  {
+    IPAddress ip = webSocket.remoteIP(client_num);
+    Serial.printf("[%u] Connection from ", client_num);
+    Serial.println(ip.toString());
+  }
+  break;
+
+  // Handle text messages from client
+  case WStype_TEXT:
+
+    // Print out raw message
+    Serial.printf("[%u] Received text: %s\n", client_num, payload);
+
+    //case for if the client is requesting data
+    if (strncmp((char *)payload, "rqst", 4) == 0)
+    {
+      File DBRead = SPIFFS.open("/database.json");
+      if (!DBRead)
       {
-        IPAddress ip = webSocket.remoteIP(client_num);
-        Serial.printf("[%u] Connection from ", client_num);
-        Serial.println(ip.toString());
+        Serial.println("Failed to open file for reading");
+        return;
       }
-      break;
-
-    // Handle text messages from client
-    case WStype_TEXT:
-
-      // Print out raw message
-      Serial.printf("[%u] Received text: %s\n", client_num, payload);
-
-      //case for if the client is requesting data
-      if ( strncmp((char *)payload, "rqst", 4) == 0 ) {
-        File DBRead = SPIFFS.open("/database.json");
-        if (!DBRead) {
-          Serial.println("Failed to open file for reading");
-          return;
-        }
-        int i = 0;
-        while (DBRead.available()) {
-          out_buf[i] = DBRead.read();
-          i++;
-        }
-        out_buf[i] = '\0';
-        DBRead.close();
-        webSocket.sendTXT(client_num, out_buf);
-      } else if ( strncmp((char *)payload, "data", 4) == 0 ) {
-        File DBFile = SPIFFS.open("/database.json", FILE_WRITE);
-        if (!DBFile) {
-          Serial.println("There was an error opening the file for writing");
-          return;
-        }
-        strcpy(in_buf, (char *)payload + 6);
-        if (DBFile.print(in_buf)) {
-          Serial.println("File was written");;
-        } else {
-          Serial.println("File write failed");
-        }
-        DBFile.close();
-      } else if ( strncmp((char *)payload, "prst", 4) == 0 ) {
-        Serial.println("Recieved Payload");
-        JSONtoPreset((char*)payload + 6);
-      } else if ( strncmp((char *)payload, "palt", 4) == 0 ) {
-        Serial.println("Recieved Palette");
-        JSONtoPalette((char*)payload + 6);
+      int i = 0;
+      while (DBRead.available())
+      {
+        out_buf[i] = DBRead.read();
+        i++;
       }
-      break;
-    // For everything else: do nothing
-    case WStype_BIN:
-    case WStype_ERROR:
-    case WStype_FRAGMENT_TEXT_START:
-    case WStype_FRAGMENT_BIN_START:
-    case WStype_FRAGMENT:
-    case WStype_FRAGMENT_FIN:
-    default:
-      break;
+      out_buf[i] = '\0';
+      DBRead.close();
+      webSocket.sendTXT(client_num, out_buf);
+    }
+    else if (strncmp((char *)payload, "data", 4) == 0)
+    {
+      File DBFile = SPIFFS.open("/database.json", FILE_WRITE);
+      if (!DBFile)
+      {
+        Serial.println("There was an error opening the file for writing");
+        return;
+      }
+      strcpy(in_buf, (char *)payload + 6);
+      if (DBFile.print(in_buf))
+      {
+        Serial.println("File was written");
+        ;
+      }
+      else
+      {
+        Serial.println("File write failed");
+      }
+      DBFile.close();
+    }
+    else if (strncmp((char *)payload, "prst", 4) == 0)
+    {
+      Serial.println("Recieved Payload");
+      JSONtoPreset((char *)payload + 6);
+    }
+    else if (strncmp((char *)payload, "palt", 4) == 0)
+    {
+      Serial.println("Recieved Palette");
+      JSONtoPalette((char *)payload + 6);
+    }
+    break;
+  // For everything else: do nothing
+  case WStype_BIN:
+  case WStype_ERROR:
+  case WStype_FRAGMENT_TEXT_START:
+  case WStype_FRAGMENT_BIN_START:
+  case WStype_FRAGMENT:
+  case WStype_FRAGMENT_FIN:
+  default:
+    break;
   }
 }
 
 // Callback: send homepage
-void onIndexRequest(AsyncWebServerRequest *request) {
+void onIndexRequest(AsyncWebServerRequest *request)
+{
   IPAddress remote_ip = request->client()->remoteIP();
   Serial.println("[" + remote_ip.toString() +
                  "] HTTP GET request of " + request->url());
@@ -102,7 +119,8 @@ void onIndexRequest(AsyncWebServerRequest *request) {
 }
 
 // Callback: send style sheet
-void onCSSRequest(AsyncWebServerRequest *request) {
+void onCSSRequest(AsyncWebServerRequest *request)
+{
   IPAddress remote_ip = request->client()->remoteIP();
   Serial.println("[" + remote_ip.toString() +
                  "] HTTP GET request of " + request->url());
@@ -110,7 +128,8 @@ void onCSSRequest(AsyncWebServerRequest *request) {
 }
 
 // Callback: send 404 if requested file does not exist
-void onPageNotFound(AsyncWebServerRequest *request) {
+void onPageNotFound(AsyncWebServerRequest *request)
+{
   IPAddress remote_ip = request->client()->remoteIP();
   Serial.println("[" + remote_ip.toString() +
                  "] HTTP GET request of " + request->url());
@@ -119,17 +138,20 @@ void onPageNotFound(AsyncWebServerRequest *request) {
 
 void webInit()
 {
-  
+
   // Make sure we can read the file system
-  if ( !SPIFFS.begin()) {
+  if (!SPIFFS.begin())
+  {
     Serial.println("Error mounting SPIFFS");
-    while (1);
+    while (1)
+      ;
   }
 
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     Serial.print(".");
     delay(500);
   }

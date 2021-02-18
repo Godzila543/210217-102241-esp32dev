@@ -4,14 +4,15 @@
 #include "Particle.h"
 #include "CoreLed.h"
 
-void updateStrip()
+void updateStrip(float delta)
 {
   switch (DB.gen)
   {
   case GRADIENT:
-    DB.gradientGenerator.update(1.0);
+    DB.gradientGenerator.update(delta);
     break;
   case PARTICLE:
+    DB.particleGenerator.update(delta);
     break;
 
   default:
@@ -27,7 +28,18 @@ void calculateStrip()
     for (int i = 0; i < 900; i++)
       strip0.SetPixelColor(i, 0, DB.gradientGenerator.calculatePixel(DB.palette, i));
     break;
+  case PARTICLE:
+    for (int i = 0; i < 900; i++)
+      strip0.SetPixelColor(i, 0, DB.particleGenerator.calculatePixel(i));
+    break;
   }
+}
+
+void updateAnimation(AnimationParam param)
+{
+
+  updateStrip(1.0);
+  calculateStrip();
 }
 
 void LEDSetup()
@@ -50,6 +62,7 @@ void LEDSetup()
 
 void LEDLoop()
 {
+  updateStrip(1.0);
   calculateStrip();
   strip0.Blt(strip1, 0, 0, 0, 0, strip_PixelCount, 1, LayoutMap);
   strip0.Blt(strip2, 0, 0, strip_PixelCount, 0, strip_PixelCount, 1, LayoutMap);
