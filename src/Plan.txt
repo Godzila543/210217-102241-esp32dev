@@ -7,3 +7,11 @@ For Particle
 	Allows for performance compromise with high particle simulations
 	Each pixel will keep a reference of the 4 closest particles
 	Bilinear interpolation can be used 
+
+---ISSUES--- 
+	- Particle wrapping may still be poor due to fmod being dumb
+
+---TODO---
+	- Implement more particle features
+		o fade in - fade out intensity
+		o proper color calculation
