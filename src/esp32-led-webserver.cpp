@@ -5,14 +5,13 @@
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <NeoPixelBus.h>
-#include <NeoPixelAnimator.h>
 #include "Led.h"
 #include "Web.h"
 
 void setup()
 {
   Serial.begin(115200);
-  //webInit();
+  webInit();
   LEDSetup();
 }
 
@@ -21,6 +20,6 @@ void loop()
 
   // Look for and handle WebSocket data
 
-  //webLoop();
+  webLoop();
   LEDLoop();
 }

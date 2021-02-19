@@ -35,13 +35,6 @@ void calculateStrip()
   }
 }
 
-void updateAnimation(AnimationParam param)
-{
-
-  updateStrip(1.0);
-  calculateStrip();
-}
-
 void LEDSetup()
 {
   pinMode(strip1_PixelPin, OUTPUT);

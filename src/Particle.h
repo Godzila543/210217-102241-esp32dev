@@ -1,26 +1,43 @@
 #define NUM_PARTICLES 100
+#define RANGE_MULTIPLIER 1
 //atribute initiation method, used to determine the initial positions, velocities, and accelerations of particles
-enum attrInitMethod
+enum class AttrInitMethod
 {
   SET,
   RANDOM
 };
 //attributes can either calculate based on lifetime or can be calculated from the next derivative down
-enum attrCalcMethod
+enum class AttrCalcMethod
 {
   CONSTANT,
   SCALEDLIFETIME
 };
 //determines which attribute should be calculated and which should be determined from derivatives
-enum derivativeLevel
+enum class DerivativeLevel
 {
   POS,
   VEL,
   ACC
 };
+//determines how intensity is calculated throughout the life of a particle
+enum class IntensityMethod
+{
+  FADEOUT,
+  FADEIN,
+  FADEINOUT,
+  PULSE
+};
+//determines how color is chosen from the palette
+enum class ColorMethod
+{
+  LIFE,
+  INTENSITY,
+  INFLUENCE,
+  SET
+};
 
 //A data structure for holding information relevant to particles
-struct particle
+struct Particle
 {
   float life = 0; //particles will have a life from 1 to 0
   float pos;
@@ -28,17 +45,24 @@ struct particle
   float color;
 };
 
+//a fog which controls the defualt color and influence of a reference
+struct Fog
+{
+  RgbColor color = RgbColor(0, 0, 0);
+  float influence = 3;
+};
+
 //A reference to a specific particle with information used to calculate the color
-struct particleReference
+struct ParticleReference
 {
   RgbColor color = RgbColor(0, 0, 0);
   float influence = 0.01;
 };
 
 //Holds all the refrences for a given pixel required to calculate the final color
-struct pixelData
+struct PixelData
 {
-  particleReference refrences[4];
+  ParticleReference refrences[4];
 };
 
 //generator for determining pixel colors based on a simulated particle system
@@ -46,24 +70,31 @@ class ParticleGenerator : Generator
 {
   //ATTRIBUTES TO BE CUSTOMIZED
 
-  float particleDecay = 0.01f; //decay will be subtracted from particle life[1, 0] every iteration
-  float timerDecay = 0.1f;     //a timer in the range of [1, 0] will be subtracted by this
+  Palette palette; //FIXME maybe find better solution
 
-  attrInitMethod posInitMethod = RANDOM; //Initiaion method for position attribute of particles
-  attrInitMethod velInitMethod = RANDOM; //Initiaion method for velocity attribute of particles
-  float posInitValue = 450.0f;           //Range/value of position
-  float velInitValue = 1.0;              //Range/value of velocity
+  float particleDecay = 0.025f; //decay will be subtracted from particle life[1, 0] every iteration
+  float timerDecay = 0.40f;     //a timer in the range of [1, 0] will be subtracted by this
 
-  derivativeLevel calculatedAttribute = ACC; //The attribute of the particle to calculate, which will be integrated to find pos/vel
-  attrCalcMethod calcMethod = CONSTANT;      //method to calculate value of calculatedAttribute
-  float attrValue1 = 0.0f;                   //values that can be used differently by different methods
-  float attrValue2 = 0.0f;                   //values that can be used differently by different methods
-  float attrValue3 = 0.0f;                   //values that can be used differently by different methods
+  IntensityMethod intensityMethod = IntensityMethod::FADEINOUT; //holds the method to be used to calculate the intensity over the life of a particle
+  ColorMethod colorMethod = ColorMethod::LIFE;                  //holds the method used to calculate the color of a particle
+  float distanceScalar = 10;                                    //Multiplied by the inverse of distance to determine the influence a particle has on a pixel
+  Fog fog;                                                      //Holds the default intensity and color of a refernce
+
+  AttrInitMethod posInitMethod = AttrInitMethod::RANDOM; //Initiaion method for position attribute of particles
+  AttrInitMethod velInitMethod = AttrInitMethod::RANDOM; //Initiaion method for velocity attribute of particles
+  float posInitValue = 450.0f;                           //Range/value of position
+  float velInitValue = 1.0;                              //Range/value of velocity
+
+  DerivativeLevel calculatedAttribute = DerivativeLevel::ACC; //The attribute of the particle to calculate, which will be integrated to find pos/vel
+  AttrCalcMethod calcMethod = AttrCalcMethod::CONSTANT;       //method to calculate value of calculatedAttribute
+  float attrValue1 = 0.0f;                                    //values that can be used differently by different methods
+  float attrValue2 = 0.0f;                                    //values that can be used differently by different methods
+  float attrValue3 = 0.0f;                                    //values that can be used differently by different methods
 
   //DATA USED FOR PARTICLE SIMULATION
-  particle particles[NUM_PARTICLES]; //array of particles
+  Particle particles[NUM_PARTICLES]; //array of particles
   float particleTimer = 1;           //timer to determine when a new particle needs to be spawned
-  pixelData pixeldata[900];          //data stored by each pixel to calculate color
+  PixelData pixeldata[900];          //data stored by each pixel to calculate color
 
   //METHODS
 
@@ -73,22 +104,24 @@ class ParticleGenerator : Generator
     particles[pi].life = 1;
     switch (posInitMethod) //define initial position
     {
-    case SET:
+    case AttrInitMethod::SET:
       particles[pi].pos = posInitValue;
       break;
-    case RANDOM:
+    case AttrInitMethod::RANDOM:
       particles[pi].pos = randomFloat(450 - posInitValue, 450 + posInitValue);
       break;
     }
     switch (velInitMethod) //define initial velocity
     {
-    case SET:
+    case AttrInitMethod::SET:
       particles[pi].vel = velInitValue;
       break;
-    case RANDOM:
+    case AttrInitMethod::RANDOM:
       particles[pi].vel = randomFloat(-velInitValue, velInitValue);
       break;
     }
+    if (colorMethod == ColorMethod::SET)
+      particles[pi].color = randomFloat(0, 1);
   }
 
   //Calculates an attribute during particle simulation
@@ -96,36 +129,64 @@ class ParticleGenerator : Generator
   {
     switch (calcMethod)
     {
-    case CONSTANT:
+    case AttrCalcMethod::CONSTANT:
       return attrValue1;
-    case SCALEDLIFETIME:
+    case AttrCalcMethod::SCALEDLIFETIME:
       return 0; //implement lol
     }
     return 0; //should never reach here
   }
 
+  //TODO pulsate (sin?)
   //Calculates the correct intensity of a particle based on its age
   float calculateIntensity(float life)
   {
+    switch (intensityMethod)
+    {
+    case IntensityMethod::FADEOUT:
+      return life;
+    case IntensityMethod::FADEIN:
+      return 1 - life;
+    case IntensityMethod::FADEINOUT:
+      return 1 - abs(1 - 2 * life);
+    }
     return life; //need to implement more interesting methods
   }
 
+  //TODO create custom methods
   //Calculates a multiplier for the influence a pixel feels from each particle
   float calculateDistanceModifier(float distance)
   {
-    return 10 / distance;
+    return distanceScalar / distance;
   }
 
   //Calculates the color a pixel should recieve from a particle
-  RgbColor calculateColor(float life, float distance)
+  RgbColor calculateColor(Particle p, float distance)
   {
-    return RgbColor(255.0 - distance * 5.0, life * 255.0, 255.0 - life * 255.0).Dim(255 - distance * 5); //test
+    float intensity = calculateIntensity(p.life);
+    float influence = intensity * calculateDistanceModifier(distance);
+    switch (colorMethod)
+    {
+    case ColorMethod::LIFE:
+      return palette.getColor(1 - p.life);
+    case ColorMethod::INFLUENCE:
+      return palette.getColor(constrain(influence, 0, 1));
+    case ColorMethod::INTENSITY:
+      return palette.getColor(intensity);
+    case ColorMethod::SET:
+      return palette.getColor(p.color);
+    }
+
+    return RgbColor(255, 255, 255); //execution should not reach here
   }
 
+  //TODO enhance this function to account for other shtuff
   //Calculates the radius of pixels a particle should affect
   int calculateRangeOfInfluence(float life)
   {
-    return 50;
+    float averageParticles = timerDecay / particleDecay; //average number of particles at any time
+    float averageDistance = 900 / averageParticles;      //average distance between particles
+    return averageDistance * RANGE_MULTIPLIER;
   }
 
   //Evaluates whether a particle needs to be spawned and will
@@ -138,7 +199,7 @@ class ParticleGenerator : Generator
     {
       Serial.print("Attempting particle... ");
       shouldCreateParticle = true;
-      particleTimer = 1; //add one to the timer instead of setting as one because it allows for more granular control of rate
+      particleTimer += 1; //add one to the timer instead of setting as one because it allows for more granular control of rate
     }
     if (shouldCreateParticle)
     {
@@ -167,25 +228,26 @@ class ParticleGenerator : Generator
 
       switch (calculatedAttribute) //switch based on which attribute we should calculate and which we should simulate
       {
-      case ACC: //calculate acceleration and then use newtons method to approximate the integral
+      case DerivativeLevel::ACC: //calculate acceleration and then use newtons method to approximate the integral
       {
         float acceleration = calculateAttribute(particles[pi].life);
         particles[pi].vel += acceleration * delta;
         particles[pi].pos += particles[pi].vel * delta;
         break;
       }
-      case VEL: //calculate velocity and then use newtons method to approximate the integral
+      case DerivativeLevel::VEL: //calculate velocity and then use newtons method to approximate the integral
       {
         particles[pi].vel = calculateAttribute(particles[pi].life);
         particles[pi].pos += particles[pi].vel * delta;
         break;
       }
-      case POS: //calculate position
+      case DerivativeLevel::POS: //calculate position
       {
         particles[pi].pos = calculateAttribute(particles[pi].life);
         break;
       }
       }
+      //FIXME fmod is bad for negative values
       particles[pi].pos = fmod(particles[pi].pos, 900); //wrap particles who pass the boundaries of the simulation area
 
       int rangeOfInfluence = calculateRangeOfInfluence(particles[pi].life);
@@ -201,25 +263,25 @@ class ParticleGenerator : Generator
           pixeldata[pixI].refrences[2] = pixeldata[pixI].refrences[1];
           pixeldata[pixI].refrences[1] = pixeldata[pixI].refrences[0];
           pixeldata[pixI].refrences[0].influence = influence;
-          pixeldata[pixI].refrences[0].color = calculateColor(particles[pi].life, distance);
+          pixeldata[pixI].refrences[0].color = calculateColor(particles[pi], distance);
         }
         else if (influence > pixeldata[pixI].refrences[1].influence) //if the particle has more influence than the second most influential particle, shift to make room and replace
         {
           pixeldata[pixI].refrences[3] = pixeldata[pixI].refrences[2];
           pixeldata[pixI].refrences[2] = pixeldata[pixI].refrences[1];
           pixeldata[pixI].refrences[1].influence = influence;
-          pixeldata[pixI].refrences[1].color = calculateColor(particles[pi].life, distance);
+          pixeldata[pixI].refrences[1].color = calculateColor(particles[pi], distance);
         }
         else if (influence > pixeldata[pixI].refrences[2].influence) //if the particle has more influence than the third most influential particle, shift to make room and replace
         {
           pixeldata[pixI].refrences[3] = pixeldata[pixI].refrences[2];
           pixeldata[pixI].refrences[2].influence = influence;
-          pixeldata[pixI].refrences[2].color = calculateColor(particles[pi].life, distance);
+          pixeldata[pixI].refrences[2].color = calculateColor(particles[pi], distance);
         }
         else if (influence > pixeldata[pixI].refrences[3].influence) //if the particle has more influence than the least influential particle, replace
         {
           pixeldata[pixI].refrences[3].influence = influence;
-          pixeldata[pixI].refrences[3].color = calculateColor(particles[pi].life, distance);
+          pixeldata[pixI].refrences[3].color = calculateColor(particles[pi], distance);
         }
       }
     }
@@ -229,14 +291,16 @@ class ParticleGenerator : Generator
   {
     for (int i = 0; i < 4; i++)
     {
-      pixeldata[index].refrences[i].influence = 0.01;
-      pixeldata[index].refrences[i].color.R = 0;
-      pixeldata[index].refrences[i].color.G = 0;
-      pixeldata[index].refrences[i].color.B = 0;
+      pixeldata[index].refrences[i].influence = fog.influence / 3;
+      pixeldata[index].refrences[i].color = fog.color;
     }
   }
 
 public:
+  void setPalette(Palette pal)
+  {
+    palette = pal;
+  }
   void update(float delta)
   {
     handleCreation(delta);

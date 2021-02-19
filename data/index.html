@@ -1,140 +1,151 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta content="width=device-width,initial-scale=1,minimal-ui" name="viewport">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons">
-    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/theme/default-dark.css">
-  </head>
 
-  <body>
-    <div id='app' class="toplevel">
-			<md-content>
-				
-				<!-- PRESEST TAB -->
-				<div v-show="tabIsPresets" class="md-scrollbar">
-					<!-- CARD FOR EACH PRESET -->
-					<div class="md-card md-theme-default md-with-hover" :class="{'md-primary': (title==activePreset)}" @click="setPreset(title)" v-for="(preset, title) in database.presets" :key="title">
-						<md-card-header>
-							<div class="md-title md-accent">{{title}}</div>
-						</md-card-header>
-						<md-card-actions md-alignment="space-between">
-							<md-button @click="editPreset(title)">Edit Preset</md-button>
-						</md-card-actions>
-					</div>
-					<!-- WEBSOCKET SERVER POPUP -->
-					<md-dialog :md-active.sync="disconnectedFromWebSocket">
-      			<md-dialog-title>Waiting for WebSocket Connection</md-dialog-title>
-    			</md-dialog>
-					<!-- PRESET CREATION DIALOG -->
-					<md-dialog :md-active.sync="presetCreationDialog">
-      			<md-dialog-title>{{editingPreset ? "Edit an Existing Preset" : "Create a New Preset"}}</md-dialog-title>
-						<md-dialog-content>
-							<md-field>
-								<label>Preset Title</label>
-      					<md-input :disabled="editingPreset" v-model="newPreset.title"></md-input>
-							</md-field>
-							<md-field>
-								<label for="newPreset.gen">Generator Type</label>
-								<md-select v-model="newPreset.gen" name="genSelect" id="genSelect">
-									<md-option value="gradient">Gradient</md-option>
-									<md-option value="particle">Particle System</md-option>
-								</md-select>
-							</md-field> 
-							<div v-show="newPreset.gen =='gradient'">
-								Speed: <input type="range" v-model="newPreset.speed"> {{(sliderToSpeed(newPreset.speed)*100).toFixed(2)}} <br/>
-								Density: <input type="range" v-model="newPreset.density"> {{sliderToDensity(newPreset.density).toFixed(2)}}
-							</div>
-						</md-dialog-content>
-    				<md-dialog-actions>
-    				  <md-button class="md-accent" @click="presetCreationDialog = false">Cancel</md-button>
-    				  <md-button class="md-primary md-raised" @click="createPreset(newPreset)">{{editingPreset ? "Modify Preset" : "Create Preset"}}</md-button>
-    				</md-dialog-actions>
-    			</md-dialog>
-					<!-- PRESET CREATION DIALOGUE BUTTON -->
-    			<md-button class="md-primary md-raised preset-button" @click="startPresetCreation()">New Preset</md-button>
+<head>
+	<meta charset="utf-8">
+	<meta content="width=device-width,initial-scale=1,minimal-ui" name="viewport">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons">
+	<link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/vue-material/dist/theme/default-dark.css">
+</head>
+
+<body>
+	<div id='app' class="toplevel">
+		<md-content>
+
+			<!-- PRESEST TAB -->
+			<div v-show="tabIsPresets" class="md-scrollbar">
+				<!-- CARD FOR EACH PRESET -->
+				<div class="md-card md-theme-default md-with-hover" :class="{'md-primary': (title==activePreset)}"
+					@click="setPreset(title)" v-for="(preset, title) in database.presets" :key="title">
+					<md-card-header>
+						<div class="md-title md-accent">{{title}}</div>
+					</md-card-header>
+					<md-card-actions md-alignment="space-between">
+						<md-button @click="editPreset(title)">Edit Preset</md-button>
+					</md-card-actions>
 				</div>
-				<!-- PALETTE TAB -->
-				<div v-show="!tabIsPresets" class="md-scrollbar" >
-					<!-- CARD FOR EACH PALETTE -->
-					<div @click="setPalette(title)" class="md-card md-theme-default md-with-hover"
-								:style="{backgroundImage: getGradientString(palette), borderStyle : (title==activePalette) ? 'solid' : ''}" 
-								md-with-hover v-for="(palette, title) in database.palettes" :key="title">
-						<md-card-header>
-							<span class="md-title">{{title}}</span>
-						</md-card-header>
-						<md-card-actions md-alignment="space-between">
-							<md-button @click="editPalette(title)">Edit Palette</md-button>
-						</md-card-actions>
-					</div>
-					<!-- PALETTE CREATION DIALOG -->
-					<md-dialog :md-active.sync="paletteCreationDialog">
-      			<md-dialog-title>{{editingPalette ? "Edit an Existing Palette" : "Create a New Palette"}}</md-dialog-title>
-						<md-dialog-content>
-							<md-field>
-								<label>Palette Title</label>
-      					<md-input :disabled="editingPalette" v-model="newPalette.title"></md-input>
-							</md-field>
-							<!-- HTML INPUT FOR EACH COLOR IN PALETTE -->
-							<md-list>
-								<md-list-item v-for="(color, index) in newPalette.data" :key="color">
-									<input style="width: 20vw; height: 5vh" type="color" :value="color" @click="colorIndex = index" @change="colorUpdated">
-								</md-list-item>
-								<md-list-item>
-									<md-button style="width: 19vw; height: 5vh" :style="{backgroundImage: getGradientString(newPalette.data)}" @click="addColor()">Add Color</md-button>
-								</md-list-item>
-							</md-list>
-    				<md-dialog-actions>
-    				  <md-button class="md-accent" @click="paletteCreationDialog = false">Cancel</md-button>
-    				  <md-button :style="{backgroundImage: getGradientString(newPalette.data)}" @click="createPalette()">{{editingPalette ? "Modify Palette" : "Create Palette"}}</md-button>
-    				</md-dialog-actions>
-    			</md-dialog>
-					<md-button :style="{backgroundImage: getGradientString(['#FF00FF', '#FF0000'])}" class="preset-button" @click="startPaletteCreation()">New Palette</md-button>
+				<!-- WEBSOCKET SERVER POPUP -->
+				<md-dialog :md-active.sync="disconnectedFromWebSocket">
+					<md-dialog-title>Waiting for WebSocket Connection</md-dialog-title>
+				</md-dialog>
+				<!-- PRESET CREATION DIALOG -->
+				<md-dialog :md-active.sync="presetCreationDialog">
+					<md-dialog-title>{{editingPreset ? "Edit an Existing Preset" : "Create a New Preset"}}</md-dialog-title>
+					<md-dialog-content>
+						<md-field>
+							<label>Preset Title</label>
+							<md-input :disabled="editingPreset" v-model="newPreset.title"></md-input>
+						</md-field>
+						<md-field>
+							<label for="newPreset.gen">Generator Type</label>
+							<md-select v-model="newPreset.gen" name="genSelect" id="genSelect">
+								<md-option value="gradient">Gradient</md-option>
+								<md-option value="particle">Particle System</md-option>
+							</md-select>
+						</md-field>
+						<div v-show="newPreset.gen =='gradient'">
+							Speed: <input type="range" v-model="newPreset.speed"> {{(sliderToSpeed(newPreset.speed)*100).toFixed(2)}}
+							<br />
+							Density: <input type="range" v-model="newPreset.density">
+							{{sliderToDensity(newPreset.density).toFixed(2)}}
+						</div>
+					</md-dialog-content>
+					<md-dialog-actions>
+						<md-button class="md-accent" @click="presetCreationDialog = false">Cancel</md-button>
+						<md-button class="md-primary md-raised" @click="createPreset(newPreset)">{{editingPreset ? "Modify Preset" :
+							"Create Preset"}}</md-button>
+					</md-dialog-actions>
+				</md-dialog>
+				<!-- PRESET CREATION DIALOGUE BUTTON -->
+				<md-button class="md-primary md-raised preset-button" @click="startPresetCreation()">New Preset</md-button>
+			</div>
+			<!-- PALETTE TAB -->
+			<div v-show="!tabIsPresets" class="md-scrollbar">
+				<!-- CARD FOR EACH PALETTE -->
+				<div @click="setPalette(title)" class="md-card md-theme-default md-with-hover"
+					:style="{backgroundImage: getGradientString(palette), borderStyle : (title==activePalette) ? 'solid' : ''}"
+					md-with-hover v-for="(palette, title) in database.palettes" :key="title">
+					<md-card-header>
+						<span class="md-title">{{title}}</span>
+					</md-card-header>
+					<md-card-actions md-alignment="space-between">
+						<md-button @click="editPalette(title)">Edit Palette</md-button>
+					</md-card-actions>
 				</div>
-			</md-content>
-			<md-content class="spacer"/>
-			<md-bottom-bar class="md-accent" @md-changed="updateDisplay" v-show="!presetCreationDialog">
-  			<md-bottom-bar-item md-label="Presets" id="presets" md-icon="settings"></md-bottom-bar-item>
-				<md-bottom-bar-item md-label="Palettes" id="palettes" md-icon="palette"></md-bottom-bar-item>
-  		</md-bottom-bar>
-		</div>
-    
-  </body>
+				<!-- PALETTE CREATION DIALOG -->
+				<md-dialog :md-active.sync="paletteCreationDialog">
+					<md-dialog-title>{{editingPalette ? "Edit an Existing Palette" : "Create a New Palette"}}</md-dialog-title>
+					<md-dialog-content>
+						<md-field>
+							<label>Palette Title</label>
+							<md-input :disabled="editingPalette" v-model="newPalette.title"></md-input>
+						</md-field>
+						<!-- HTML INPUT FOR EACH COLOR IN PALETTE -->
+						<md-list>
+							<md-list-item v-for="(color, index) in newPalette.data" :key="color">
+								<input style="width: 20vw; height: 5vh" type="color" :value="color" @click="colorIndex = index"
+									@change="colorUpdated">
+							</md-list-item>
+							<md-list-item>
+								<md-button style="width: 19vw; height: 5vh"
+									:style="{backgroundImage: getGradientString(newPalette.data)}" @click="addColor()">Add Color
+								</md-button>
+							</md-list-item>
+						</md-list>
+						<md-dialog-actions>
+							<md-button class="md-accent" @click="paletteCreationDialog = false">Cancel</md-button>
+							<md-button :style="{backgroundImage: getGradientString(newPalette.data)}" @click="createPalette()">
+								{{editingPalette ? "Modify Palette" : "Create Palette"}}</md-button>
+						</md-dialog-actions>
+				</md-dialog>
+				<md-button :style="{backgroundImage: getGradientString(['#FF00FF', '#FF0000'])}" class="preset-button"
+					@click="startPaletteCreation()">New Palette</md-button>
+			</div>
+		</md-content>
+		<md-content class="spacer" />
+		<md-bottom-bar class="md-accent" @md-changed="updateDisplay" v-show="!presetCreationDialog">
+			<md-bottom-bar-item md-label="Presets" id="presets" md-icon="settings"></md-bottom-bar-item>
+			<md-bottom-bar-item md-label="Palettes" id="palettes" md-icon="palette"></md-bottom-bar-item>
+		</md-bottom-bar>
+	</div>
+
+</body>
+
 </html>
 
 <script src="https://unpkg.com/vue"></script>
 <script src="https://unpkg.com/vue-material"></script>
 <script>
-  Vue.use(VueMaterial.default)
-  new Vue({
-    el: '#app',
+	Vue.use(VueMaterial.default)
+	new Vue({
+		el: '#app',
 		name: 'App',
 		components: {
-			
+
 		},
 		created() {
 			var vm = this
 			console.log("Starting connection to WebSocket Server")
-			this.connection = new WebSocket("ws://192.168.0.38:1337")
+			this.connection = new WebSocket("ws://192.168.1.9:1337")
 
-			this.connection.onmessage = function(event) {
+			this.connection.onmessage = function (event) {
 				console.log("Recieved: " + event.data)
 				vm.database = JSON.parse(event.data)
 			}
 
-			this.connection.onopen = function(event) {
+			this.connection.onopen = function (event) {
 				console.log(event.data)
 				console.log("Successfully connected to the ESP32 websocket server")
 				vm.sendMessage("rqst")
 				vm.disconnectedFromWebSocket = false
 			}
 
-			this.connection.onerror = function(event) {
+			this.connection.onerror = function (event) {
 				console.log("ERROR: " + event.data)
 			}
 
-			this.connection.onclose = function(event) {
+			this.connection.onclose = function (event) {
 				console.log(event.data)
 				console.log("Disconnected from ESP32 websocket server")
 				vm.disconnectedFromWebSocket = true
@@ -142,10 +153,10 @@
 		},
 		methods: {
 			sliderToSpeed(value) {
-				return Math.pow((value-50)/100, 3)
+				return Math.pow((value - 50) / 100, 3)
 			},
-			sliderToDensity(value){
-				return Math.pow((value-50)/20, 3)
+			sliderToDensity(value) {
+				return Math.pow((value - 50) / 20, 3)
 			},
 			updateDisplay(activeItem) {
 				console.log(activeItem)
@@ -153,18 +164,18 @@
 					this.tabIsPresets = true
 				} else {
 					this.tabIsPresets = false
-				}	
+				}
 			},
-			sendDatabase(){
+			sendDatabase() {
 				this.sendMessage("data: " + JSON.stringify(this.database))
 			},
-			sendPalette(palette){
+			sendPalette(palette) {
 				var preparedPalette = {}
 				preparedPalette.colors = palette.map(convertToRGB)
 				preparedPalette.length = preparedPalette.colors.length;
 				this.sendMessage("palt: " + JSON.stringify(preparedPalette))
 			},
-			sendPreset(preset){
+			sendPreset(preset) {
 				var preparedPreset = {}
 				if (preset.gen == "gradient") {
 					preparedPreset.generator = 0
@@ -180,11 +191,11 @@
 				this.sendPreset(this.database.presets[this.activePreset])
 			},
 			startPresetCreation() {
-				this.newPreset = {'speed': 50, 'density': 50, 'title': "", 'gen': ""}
+				this.newPreset = { 'speed': 50, 'density': 50, 'title': "", 'gen': "" }
 				this.presetCreationDialog = true
 			},
 			editPreset(presetName) {
-				console.log("Now Editing preset: "+presetName)
+				console.log("Now Editing preset: " + presetName)
 				this.newPreset.title = presetName
 				this.newPreset.gen = this.database.presets[presetName].gen
 				this.newPreset.speed = this.database.presets[presetName].speed
@@ -209,7 +220,7 @@
 				this.sendPalette(this.database.palettes[paletteName])
 			},
 			startPaletteCreation() {
-				this.newPalette = {title: "", data: ["#FF0000", "#0000FF"]}
+				this.newPalette = { title: "", data: ["#FF0000", "#0000FF"] }
 				this.paletteCreationDialog = true
 			},
 			addColor() {
@@ -237,16 +248,16 @@
 				this.connection.send(message)
 			},
 			getGradientString(palette) {
-				return "linear-gradient(30deg,"+palette.toString()+")"
+				return "linear-gradient(30deg," + palette.toString() + ")"
 			}
 		},
-		data () {
+		data() {
 			return {
 				ESP32LED: false,
 				disconnectedFromWebSocket: true,
 				connection: null,
-				newPreset: {'speed': 50, 'density': 50, 'title': "", 'gen': ""},
-				newPalette: {title: "", data: ["#FF0000", "#0000FF"]},
+				newPreset: { 'speed': 50, 'density': 50, 'title': "", 'gen': "" },
+				newPalette: { title: "", data: ["#FF0000", "#0000FF"] },
 				colorIndex: 0,
 				presetCreationDialog: false,
 				editingPreset: false,
@@ -255,55 +266,57 @@
 				activePreset: 'Simple Gradient',
 				activePalette: 'Test',
 				tabIsPresets: false,
-				database: {presets: {}, palettes: {}}
+				database: { presets: {}, palettes: {} }
 			}
 		}
 	})
-convertToRGB = function(hexString){
-		if(hexString.length != 7){
-        throw "Only six-digit hex colors are allowed.";
-    }
+	convertToRGB = function (hexString) {
+		if (hexString.length != 7) {
+			throw "Only six-digit hex colors are allowed.";
+		}
 
 		hexString = hexString.substring(1);
-    var aRgbHex = hexString.match(/.{1,2}/g);
-    var aRgb = [
-        parseInt(aRgbHex[0], 16),
-        parseInt(aRgbHex[1], 16),
-        parseInt(aRgbHex[2], 16)
-    ];
-    return aRgb;
-}
+		var aRgbHex = hexString.match(/.{1,2}/g);
+		var aRgb = [
+			parseInt(aRgbHex[0], 16),
+			parseInt(aRgbHex[1], 16),
+			parseInt(aRgbHex[2], 16)
+		];
+		return aRgb;
+	}
 
 </script>
 
 <style lang="scss" scoped>
-  @import "~vue-material/theme/engine";
+	@import "~vue-material/theme/engine";
 
-  @import "~vue-material/base/theme";
-  @import "~vue-material/components/MdCard/theme";
+	@import "~vue-material/base/theme";
+	@import "~vue-material/components/MdCard/theme";
 
-  .md-card {
-    width: 31vw;
-    margin: 1vw;
-    display: inline-block;
-    vertical-align: top;
-  }
+	.md-card {
+		width: 31vw;
+		margin: 1vw;
+		display: inline-block;
+		vertical-align: top;
+	}
+
 	.md-bottom-bar {
 		position: fixed;
 		bottom: 1px;
 		z-index: 500;
 	}
+
 	.toplevel {
 		max-width: 100vw;
 		flex-direction: column;
 	}
+
 	.spacer {
 		height: 100px;
 	}
+
 	.preset-button {
 		width: 99vw;
 		height: 50px;
 	}
-
 </style>
-

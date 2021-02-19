@@ -29,7 +29,6 @@ struct Database
   ParticleGenerator particleGenerator;
   Palette palette;
   genType gen = PARTICLE;
-  NeoPixelAnimator animator = NeoPixelAnimator(1);
 };
 
 Database DB;
@@ -46,7 +45,7 @@ void JSONtoPalette(char *JSONstr)
     DB.palette.colors[i] = RgbColor(colors[i][0], colors[i][1], colors[i][2]);
   }
   Serial.println(DB.palette.len);
-  Serial.println(DB.palette.colors[0].R);
+  DB.particleGenerator.setPalette(DB.palette); //FIXME this some dumb shit
 }
 
 void JSONtoPreset(char *JSONstr)
