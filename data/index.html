@@ -3,129 +3,265 @@
 
 <head>
 	<meta charset="utf-8">
-	<meta content="width=device-width,initial-scale=1,minimal-ui" name="viewport">
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons">
-	<link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.min.css">
-	<link rel="stylesheet" href="https://unpkg.com/vue-material/dist/theme/default-dark.css">
+	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
 </head>
 
 <body>
-	<div id='app' class="toplevel">
-		<md-content>
-
+	<v-app id='app'>
+		<v-main>
+			<!-- WEBSOCKET SERVER POPUP -->
+			<v-dialog v-model="disconnectedFromWebSocket" width="40vw">
+				<div class="text-h4">Waiting for WebSocket Connection...</div>
+			</v-dialog>
 			<!-- PRESEST TAB -->
-			<div v-show="tabIsPresets" class="md-scrollbar">
+			<v-container fluid v-if="activeTab == 'Presets'">
 				<!-- CARD FOR EACH PRESET -->
-				<div class="md-card md-theme-default md-with-hover" :class="{'md-primary': (title==activePreset)}"
-					@click="setPreset(title)" v-for="(preset, title) in database.presets" :key="title">
-					<md-card-header>
-						<div class="md-title md-accent">{{title}}</div>
-					</md-card-header>
-					<md-card-actions md-alignment="space-between">
-						<md-button @click="editPreset(title)">Edit Preset</md-button>
-					</md-card-actions>
-				</div>
-				<!-- WEBSOCKET SERVER POPUP -->
-				<md-dialog :md-active.sync="disconnectedFromWebSocket">
-					<md-dialog-title>Waiting for WebSocket Connection</md-dialog-title>
-				</md-dialog>
-				<!-- PRESET CREATION DIALOG -->
-				<md-dialog :md-active.sync="presetCreationDialog">
-					<md-dialog-title>{{editingPreset ? "Edit an Existing Preset" : "Create a New Preset"}}</md-dialog-title>
-					<md-dialog-content>
-						<md-field>
-							<label>Preset Title</label>
-							<md-input :disabled="editingPreset" v-model="newPreset.title"></md-input>
-						</md-field>
-						<md-field>
-							<label for="newPreset.gen">Generator Type</label>
-							<md-select v-model="newPreset.gen" name="genSelect" id="genSelect">
-								<md-option value="gradient">Gradient</md-option>
-								<md-option value="particle">Particle System</md-option>
-							</md-select>
-						</md-field>
-						<div v-show="newPreset.gen =='gradient'">
-							Speed: <input type="range" v-model="newPreset.speed"> {{(sliderToSpeed(newPreset.speed)*100).toFixed(2)}}
-							<br />
-							Density: <input type="range" v-model="newPreset.density">
-							{{sliderToDensity(newPreset.density).toFixed(2)}}
-						</div>
-					</md-dialog-content>
-					<md-dialog-actions>
-						<md-button class="md-accent" @click="presetCreationDialog = false">Cancel</md-button>
-						<md-button class="md-primary md-raised" @click="createPreset(newPreset)">{{editingPreset ? "Modify Preset" :
-							"Create Preset"}}</md-button>
-					</md-dialog-actions>
-				</md-dialog>
-				<!-- PRESET CREATION DIALOGUE BUTTON -->
-				<md-button class="md-primary md-raised preset-button" @click="startPresetCreation()">New Preset</md-button>
-			</div>
-			<!-- PALETTE TAB -->
-			<div v-show="!tabIsPresets" class="md-scrollbar">
-				<!-- CARD FOR EACH PALETTE -->
-				<div @click="setPalette(title)" class="md-card md-theme-default md-with-hover"
-					:style="{backgroundImage: getGradientString(palette), borderStyle : (title==activePalette) ? 'solid' : ''}"
-					md-with-hover v-for="(palette, title) in database.palettes" :key="title">
-					<md-card-header>
-						<span class="md-title">{{title}}</span>
-					</md-card-header>
-					<md-card-actions md-alignment="space-between">
-						<md-button @click="editPalette(title)">Edit Palette</md-button>
-					</md-card-actions>
-				</div>
-				<!-- PALETTE CREATION DIALOG -->
-				<md-dialog :md-active.sync="paletteCreationDialog">
-					<md-dialog-title>{{editingPalette ? "Edit an Existing Palette" : "Create a New Palette"}}</md-dialog-title>
-					<md-dialog-content>
-						<md-field>
-							<label>Palette Title</label>
-							<md-input :disabled="editingPalette" v-model="newPalette.title"></md-input>
-						</md-field>
-						<!-- HTML INPUT FOR EACH COLOR IN PALETTE -->
-						<md-list>
-							<md-list-item v-for="(color, index) in newPalette.data" :key="color">
-								<input style="width: 20vw; height: 5vh" type="color" :value="color" @click="colorIndex = index"
-									@change="colorUpdated">
-							</md-list-item>
-							<md-list-item>
-								<md-button style="width: 19vw; height: 5vh"
-									:style="{backgroundImage: getGradientString(newPalette.data)}" @click="addColor()">Add Color
-								</md-button>
-							</md-list-item>
-						</md-list>
-						<md-dialog-actions>
-							<md-button class="md-accent" @click="paletteCreationDialog = false">Cancel</md-button>
-							<md-button :style="{backgroundImage: getGradientString(newPalette.data)}" @click="createPalette()">
-								{{editingPalette ? "Modify Palette" : "Create Palette"}}</md-button>
-						</md-dialog-actions>
-				</md-dialog>
-				<md-button :style="{backgroundImage: getGradientString(['#FF00FF', '#FF0000'])}" class="preset-button"
-					@click="startPaletteCreation()">New Palette</md-button>
-			</div>
-		</md-content>
-		<md-content class="spacer" />
-		<md-bottom-bar class="md-accent" @md-changed="updateDisplay" v-show="!presetCreationDialog">
-			<md-bottom-bar-item md-label="Presets" id="presets" md-icon="settings"></md-bottom-bar-item>
-			<md-bottom-bar-item md-label="Palettes" id="palettes" md-icon="palette"></md-bottom-bar-item>
-		</md-bottom-bar>
-	</div>
+				<v-flex d-flex>
+					<v-layout wrap>
+						<v-flex md4 v-for="(preset, title) in database.presets" :key="title" class="pa-2">
+							<v-card :color="(title==activePreset) ? 'primary' : 'secondary'" @click="setPreset(title)">
+								<v-card-title>{{title}}</v-card-title>
+								<v-card-actions>
+									<v-btn @click="editPreset(title)">Edit Preset</v-btn>
+									<v-spacer></v-spacer>
+								</v-card-actions>
+							</v-card>
+						</v-flex>
+						<v-flex md12 class="pa-2">
+							<v-btn color="primary" @click="startPresetCreation()" fluid>
+								Create Preset
+							</v-btn>
+						</v-flex>
+					</v-layout>
+				</v-flex>
+				<!--PRESET CREATION DIALOG-->
+				<v-dialog v-model="presetCreationDialog" max-width="800px"
+					:fullscreen="$vuetify.breakpoint.xsOnly ? true : false">
+					<v-card>
+						<v-card-title class="headline grey">
+							{{editingPreset ? "Edit an Existing Preset" : "Create a New Preset"}}
+						</v-card-title>
 
+						<v-card-actions>
+							<v-container>
+								<v-text-field label="Name" v-model="newPreset.t" :disabled=editingPreset></v-text-field>
+								<v-select label="Generator" :items="generatorTypes" v-model=newPreset.g></v-select>
+								<v-form v-model="gradientForm">
+									<v-container v-show=newPreset.g=='Gradient'>
+										<v-slider v-model="newPreset.s" min=-10 max=10 step=0.1 label="Speed" thumb-label="always"
+											:rules="rules">
+										</v-slider>
+										<v-slider v-model="newPreset.d" min=-10 max=10 step=0.1 label="Density" thumb-label="always"
+											:rules="rules">
+										</v-slider>
+									</v-container>
+								</v-form>
+								<v-form v-model=particleForm>
+									<v-container v-show="newPreset.g=='Particle'">
+										<v-slider label="Number of Particles" thumb-label="always" v-model=newPreset.pC min=0 max=100
+											:rules="rules">
+										</v-slider>
+										<v-slider label="Particle Lifetime" thumb-label="always" v-model="newPreset.pL" min=0.1 max=10
+											:rules="rules" step=0.1>
+										</v-slider>
+										<v-slider label="Range of Influence" thumb-label="always" v-model=newPreset.ptR min=0 max=300
+											:rules="rules">
+										</v-slider>
+										<v-row class="pb-8">
+											<span>Fog Color: </span>
+											<v-spacer></v-spacer>
+											<v-color-picker hide-inputs dot-size="9" v-model=newPreset.fC></v-color-picker>
+										</v-row>
+										<v-slider label="Fog Threshold" thumb-label="always" v-model=newPreset.fT min=0.1 max=5 step=0.1
+											:rules="rules">
+										</v-slider>
+										<v-select label="Intensity Method" :items="intensityMethods" v-model=newPreset.iM :rules="rules">
+										</v-select>
+										<v-select label="Color Method" :items="colorMethods" v-model=newPreset.cM :rules="rules"></v-select>
+										<v-select label="Initial Position Method" :items="attributeInitMethods" v-model=newPreset.pI
+											:rules="rules">
+										</v-select>
+										<v-slider label="Position" thumb-label="always" v-model="newPreset.pV" min=0 max=900
+											v-show="newPreset.pI == 'Set'"></v-slider>
+										<v-range-slider label="Position Range" thumb-label="always" v-model="newPreset.pR" min=0 max=900
+											v-show="newPreset.pI == 'Random in Range'"></v-range-slider>
+										<v-select label="Initial Velocity Method" :items="attributeInitMethods" v-model=newPreset.vI
+											:rules="rules">
+										</v-select>
+										<v-slider label="Velocity" thumb-label="always" v-model="newPreset.vV" min=-20 max=20 step=0.1
+											v-show="newPreset.vI == 'Set'"></v-slider>
+										<v-range-slider label="Velocity Range" thumb-label="always" v-model="newPreset.vR" min=-20 max=20
+											step=0.1 v-show="newPreset.vI == 'Random in Range'"></v-range-slider>
+										<v-select label="Calculated Attribute" :items="AttributesToCalculate" v-model=newPreset.cA
+											:rules="rules">
+										</v-select>
+										<v-select label="Calculation Method" :items="AttributeCalcMethods" v-model=newPreset.aM
+											:rules="rules">
+										</v-select>
+										<v-slider v-show="newPreset.aM=='Constant'" label="Attribute Value" thumb-label="always"
+											v-model=newPreset.aV :min="(newPreset.cA=='Position') ? 0 : -10"
+											:max="(newPreset.cA=='Position') ? 900 : 10" step=0.1></v-slider>
+										<v-range-slider v-show="newPreset.aM=='Scaled over Life'" label="Attribute Range"
+											thumb-label="always" v-model=newPreset.aR :min="(newPreset.cA=='Position') ? 0 : -10"
+											:max="(newPreset.cA=='Position') ? 900 : 10" step=0.1>
+										</v-range-slider>
+									</v-container>
+								</v-form>
+								<v-divider></v-divider>
+								<v-row class="pt-8">
+									<v-btn outlined color="accent"
+										@click="presetCreationDialog=false; if(editingPreset) presetDeletionDialog = true">{{editingPreset ?
+										"Delete Preset" : "Cancel"}}</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn color="primary" text @click="createPreset(newPreset)"
+										:disabled="newPreset.g=='Gradient' ? !gradientForm : !particleForm">
+										{{editingPreset ? "Modify Preset" : "Create Preset"}}
+									</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+				<!--PRESET DELETION DIALOG-->
+				<v-dialog v-model="presetDeletionDialog" max-width=400px>
+					<v-card>
+						<v-card-title class="accent">
+							Delete Preset?
+						</v-card-title>
+						<v-card-actions>
+							<v-container>
+								<v-row class="">
+									<v-btn outlined color="primary" @click="presetCreationDialog=true; presetDeletionDialog=false">Cancel
+									</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn plain color="accent" @click="deletePreset(newPreset)">Confirm Delete</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+			</v-container>
+			<v-container v-if="activeTab == 'Palettes'">
+				<!-- CARD FOR EACH PALETTE -->
+				<v-flex d-flex>
+					<v-layout wrap>
+						<v-flex md4 v-for="(palette, title) in database.palettes" :key="title" class="pa-2">
+							<v-card @click="setPalette(title)" class="" :style="{backgroundImage: getGradientString(palette)}"
+								:outlined="title==activePalette">
+								<v-card-title>{{title}}</v-card-title>
+								<v-card-actions>
+									<v-btn @click="editPalette(title)">Edit Palette</v-btn>
+								</v-card-actions>
+							</v-card>
+						</v-flex>
+						<v-flex md12 class="pa-2">
+							<v-btn color="accent" @click="startPaletteCreation()">
+								Create Palette
+							</v-btn>
+						</v-flex>
+					</v-layout>
+				</v-flex>
+				<!--PALETTE CREATION DIALOG-->
+				<v-dialog v-model="paletteCreationDialog" :fullscreen="$vuetify.breakpoint.xsOnly ? true : false"
+					max-width=400px>
+					<v-card>
+						<v-card-title :style="{backgroundImage: getGradientString(newPalette.data)}">
+							{{editingPalette ? "Edit an Existing Palette" : "Create a New Palette"}}
+						</v-card-title>
+						<v-card-actions>
+							<v-container>
+								<v-text-field label="Name" v-model="newPalette.title" :disabled=editingPalette></v-text-field>
+								<v-row v-for="(color, index) in newPalette.data" :key="color">
+									<v-color-picker canvas-height="100px" v-model="newPalette.data[index]" hide-inputs>
+									</v-color-picker>
+									<v-btn icon color="accent" @click="newPalette.data.splice(index, 1)">
+										<v-icon>mdi-delete-outline</v-icon>
+									</v-btn>
+								</v-row>
+								<v-btn outlined @click="addColor()" :disabled="newPalette.data.length>7">Add Color</v-btn>
+								<v-row class="pt-8">
+									<v-btn outlined color="accent"
+										@click="paletteCreationDialog=false; if(editingPalette) paletteDeletionDialog = true">
+										{{editingPalette ?
+										"Delete Palette" : "Cancel"}}</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn color="primary" @click="createPalette()"
+										:disabled="newPalette.data.length<2 || newPalette.data.length>7">
+										{{editingPalette ? "Modify Palette" : "Create Palette"}}
+									</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+				<!--PRESET DELETION DIALOG-->
+				<v-dialog v-model="paletteDeletionDialog" max-width=400px>
+					<v-card>
+						<v-card-title class="accent">
+							Delete Palette?
+						</v-card-title>
+						<v-card-actions>
+							<v-container>
+								<v-row class="">
+									<v-btn outlined color="primary" @click="paletteCreationDialog=true; paletteDeletionDialog=false">
+										Cancel
+									</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn plain color="accent" @click="deletePalette(newPalette)">Confirm Delete</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+			</v-container>
+			<!--SETTINGS TAB-->
+			<v-container v-show="activeTab == 'Settings'">
+				<v-btn @click="requestDatabase()">Request Database</v-btn>
+				<v-btn @click="console.log(database)">Log Database</v-btn>
+			</v-container>
+		</v-main>
+		<v-bottom-navigation fixed v-model="activeTab" v-show="!presetCreationDialog">
+			<v-btn value="Presets">
+				<span>Presets</span>
+				<v-icon>mdi-wrench</v-icon>
+			</v-btn>
+			<v-btn value="Palettes">
+				<span>Palettes</span>
+				<v-icon>mdi-palette</v-icon>
+			</v-btn>
+			<v-btn value="Settings">
+				<span>Settings</span>
+				<v-icon>mdi-settings</v-icon>
+			</v-btn>
+		</v-bottom-navigation>
+	</v-app>
 </body>
 
 </html>
 
-<script src="https://unpkg.com/vue"></script>
-<script src="https://unpkg.com/vue-material"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
 <script>
-	Vue.use(VueMaterial.default)
+	const vuetify = new Vuetify({
+		theme: {
+			dark: true,
+		},
+	})
 	new Vue({
 		el: '#app',
+		vuetify: vuetify,
 		name: 'App',
 		components: {
 
 		},
 		created() {
+			this.$vuetify.theme.dark = true
 			var vm = this
+			this.requestDatabase(vm)
+
 			console.log("Starting connection to WebSocket Server")
 			this.connection = new WebSocket("ws://192.168.1.9:1337")
 
@@ -137,7 +273,6 @@
 			this.connection.onopen = function (event) {
 				console.log(event.data)
 				console.log("Successfully connected to the ESP32 websocket server")
-				vm.sendMessage("rqst")
 				vm.disconnectedFromWebSocket = false
 			}
 
@@ -158,16 +293,20 @@
 			sliderToDensity(value) {
 				return Math.pow((value - 50) / 20, 3)
 			},
-			updateDisplay(activeItem) {
-				console.log(activeItem)
-				if (activeItem == "presets") {
-					this.tabIsPresets = true
-				} else {
-					this.tabIsPresets = false
-				}
-			},
 			sendDatabase() {
 				this.sendMessage("data: " + JSON.stringify(this.database))
+			},
+			requestDatabase(vm) {
+				fetch('database.json')
+					.then(function (response) {
+						return response.json()
+					})
+					.then(function (data) {
+						vm.database = data
+					})
+					.catch(function (err) {
+						console.log(err)
+					})
 			},
 			sendPalette(palette) {
 				var preparedPalette = {}
@@ -191,28 +330,52 @@
 				this.sendPreset(this.database.presets[this.activePreset])
 			},
 			startPresetCreation() {
-				this.newPreset = { 'speed': 50, 'density': 50, 'title': "", 'gen': "" }
+				this.newPreset = {
+					s: 50, //speed
+					d: 50, //density
+					t: "", //title
+					g: "", //generator
+					pC: 0, //particle count
+					pL: 0, //particle life
+					ptR: 0, //particle range
+					fC: {}, //fog color
+					fT: 0, //fog threshhold
+					iM: '',    //intensity method
+					cM: '', //color method
+					pI: '', //pos init method
+					pV: 0, //pos value
+					pR: [-1, 1], //pos range
+					vI: '', //velocity init method
+					vV: 0, //velocity value
+					vR: [-1, 1], //velocity range
+					cA: '', //calculated attribute
+					aM: '', //attribute method
+					aV: 0, //attribute value
+					aR: [-1, 1], //attribute range
+				}
+				console.log("hello")
 				this.presetCreationDialog = true
 			},
 			editPreset(presetName) {
 				console.log("Now Editing preset: " + presetName)
-				this.newPreset.title = presetName
-				this.newPreset.gen = this.database.presets[presetName].gen
-				this.newPreset.speed = this.database.presets[presetName].speed
-				this.newPreset.density = this.database.presets[presetName].density
+				this.newPreset = JSON.parse(JSON.stringify(this.database.presets[presetName]))
 				// delete this.database.presets[presetName]
 				this.editingPreset = true
 				this.presetCreationDialog = true
 			},
 			createPreset(nPre) {
-				var tempTable = {}
-				tempTable.gen = nPre.gen
-				tempTable.speed = nPre.speed
-				tempTable.density = nPre.density
-				this.database.presets[nPre.title] = tempTable
+				var tempTable = JSON.parse(JSON.stringify(nPre))
+				tempTable.fC = tempTable.fC.rgba
+				this.database.presets[nPre.t] = tempTable
 				this.presetCreationDialog = false
 				this.editingPreset = false
-				this.setPreset(nPre.title)
+				this.setPreset(nPre.t)
+				this.sendDatabase()
+			},
+			deletePreset(preset) {
+				delete this.database.presets[preset.t]
+				this.presetDeletionDialog = false
+				this.editingPreset = false
 				this.sendDatabase()
 			},
 			setPalette(paletteName) {
@@ -233,8 +396,14 @@
 			createPalette() {
 				this.database.palettes[this.newPalette.title] = this.newPalette.data
 				this.paletteCreationDialog = false
-				this.editingPreset = false
+				this.editingPalette = false
 				this.setPalette(this.newPalette.title)
+				this.sendDatabase()
+			},
+			deletePalette(palette) {
+				delete this.database.palettes[palette.title]
+				this.paletteDeletionDialog = false
+				this.editingPalette = false
 				this.sendDatabase()
 			},
 			editPalette(paletteTitle) {
@@ -253,19 +422,31 @@
 		},
 		data() {
 			return {
+				generatorTypes: ['Gradient', 'Particle'],
+				intensityMethods: ['Fade In', 'Fade Out', 'Fade In and Out'],
+				colorMethods: ['Age', 'Intensity', 'Influence', 'Random'],
+				attributeInitMethods: ['Set', 'Random in Range'],
+				AttributesToCalculate: ['Position', 'Velocity', 'Acceleration'],
+				AttributeCalcMethods: ['Constant', 'Scaled over Life'],
+				rules: [x => !!x],
+				rangeRules: [x => !!x[0] && !!x[1]],
+				gradientForm: false,
+				particleForm: false,
 				ESP32LED: false,
 				disconnectedFromWebSocket: true,
 				connection: null,
-				newPreset: { 'speed': 50, 'density': 50, 'title': "", 'gen': "" },
+				newPreset: {},
 				newPalette: { title: "", data: ["#FF0000", "#0000FF"] },
 				colorIndex: 0,
 				presetCreationDialog: false,
+				presetDeletionDialog: false,
 				editingPreset: false,
 				paletteCreationDialog: false,
+				paletteDeletionDialog: false,
 				editingPalette: false,
 				activePreset: 'Simple Gradient',
 				activePalette: 'Test',
-				tabIsPresets: false,
+				activeTab: 'presets',
 				database: { presets: {}, palettes: {} }
 			}
 		}
@@ -286,37 +467,3 @@
 	}
 
 </script>
-
-<style lang="scss" scoped>
-	@import "~vue-material/theme/engine";
-
-	@import "~vue-material/base/theme";
-	@import "~vue-material/components/MdCard/theme";
-
-	.md-card {
-		width: 31vw;
-		margin: 1vw;
-		display: inline-block;
-		vertical-align: top;
-	}
-
-	.md-bottom-bar {
-		position: fixed;
-		bottom: 1px;
-		z-index: 500;
-	}
-
-	.toplevel {
-		max-width: 100vw;
-		flex-direction: column;
-	}
-
-	.spacer {
-		height: 100px;
-	}
-
-	.preset-button {
-		width: 99vw;
-		height: 50px;
-	}
-</style>
