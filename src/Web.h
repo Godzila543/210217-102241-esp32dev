@@ -117,6 +117,14 @@ void onIndexRequest(AsyncWebServerRequest *request)
   request->send(SPIFFS, "/index.html", "text/html");
 }
 
+void onDataRequest(AsyncWebServerRequest *request)
+{
+  IPAddress remote_ip = request->client()->remoteIP();
+  Serial.println("[" + remote_ip.toString() +
+                 "] HTTP GET request of " + request->url());
+  request->send(SPIFFS, "/database.json", "text/html");
+}
+
 // Callback: send style sheet
 void onCSSRequest(AsyncWebServerRequest *request)
 {
@@ -165,6 +173,9 @@ void webInit()
 
   // On HTTP request for style sheet, provide style.css
   server.on("/style.css", HTTP_GET, onCSSRequest);
+
+  // On HTTP request for database, provide index.html file
+  server.on("/database.json", HTTP_GET, onDataRequest);
 
   // Handle requests for pages that do not exist
   server.onNotFound(onPageNotFound);

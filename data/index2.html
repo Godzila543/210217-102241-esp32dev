@@ -17,7 +17,7 @@
 				<div class="text-h4">Waiting for WebSocket Connection...</div>
 			</v-dialog>
 			<!-- PRESEST TAB -->
-			<v-container fluid v-show="activeTab == 'Presets'">
+			<v-container fluid v-if="activeTab == 'Presets'">
 				<!-- CARD FOR EACH PRESET -->
 				<v-flex d-flex>
 					<v-layout wrap>
@@ -144,7 +144,7 @@
 					</v-card>
 				</v-dialog>
 			</v-container>
-			<v-container v-show="activeTab == 'Palettes'">
+			<v-container v-if="activeTab == 'Palettes'">
 				<!-- CARD FOR EACH PALETTE -->
 				<v-flex d-flex>
 					<v-layout wrap>
@@ -217,6 +217,11 @@
 					</v-card>
 				</v-dialog>
 			</v-container>
+			<!--SETTINGS TAB-->
+			<v-container v-show="activeTab == 'Settings'">
+				<v-btn @click="requestDatabase()">Request Database</v-btn>
+				<v-btn @click="console.log(database)">Log Database</v-btn>
+			</v-container>
 		</v-main>
 		<v-bottom-navigation fixed v-model="activeTab" v-show="!presetCreationDialog">
 			<v-btn value="Presets">
@@ -254,8 +259,9 @@
 		},
 		created() {
 			this.$vuetify.theme.dark = true
-			console.log("set to dark")
 			var vm = this
+			this.requestDatabase(vm)
+
 			console.log("Starting connection to WebSocket Server")
 			this.connection = new WebSocket("ws://192.168.1.9:1337")
 
@@ -267,7 +273,6 @@
 			this.connection.onopen = function (event) {
 				console.log(event.data)
 				console.log("Successfully connected to the ESP32 websocket server")
-				vm.sendMessage("rqst")
 				vm.disconnectedFromWebSocket = false
 			}
 
@@ -290,6 +295,18 @@
 			},
 			sendDatabase() {
 				this.sendMessage("data: " + JSON.stringify(this.database))
+			},
+			requestDatabase(vm) {
+				fetch('database.json')
+					.then(function (response) {
+						return response.json()
+					})
+					.then(function (data) {
+						vm.database = data
+					})
+					.catch(function (err) {
+						console.log(err)
+					})
 			},
 			sendPalette(palette) {
 				var preparedPalette = {}

@@ -133,12 +133,11 @@ class ParticleGenerator : Generator
     case AttrCalcMethod::CONSTANT:
       return attrValue1;
     case AttrCalcMethod::SCALEDLIFETIME:
-      return (attrValue2 - attrValue1) * life + attrValue1
+      return (attrValue2 - attrValue1) * life + attrValue1;
     }
     return 0; //should never reach here
   }
 
-  //TODO pulsate (sin?)
   //Calculates the correct intensity of a particle based on its age
   float calculateIntensity(float life)
   {
@@ -150,8 +149,9 @@ class ParticleGenerator : Generator
       return 1 - life;
     case IntensityMethod::FADEINOUT:
       return 1 - abs(1 - 2 * life);
+    case IntensityMethod::PULSE:
+      return life; //TODO pulsate (sin?)
     }
-    return life; //need to implement more interesting methods
   }
 
   //TODO create custom methods
