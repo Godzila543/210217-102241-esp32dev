@@ -152,6 +152,7 @@ class ParticleGenerator : Generator
     case IntensityMethod::PULSE:
       return life; //TODO pulsate (sin?)
     }
+    return 0; //failsafe
   }
 
   //TODO create custom methods
@@ -199,7 +200,6 @@ class ParticleGenerator : Generator
     bool shouldCreateParticle = false;   //boolean to track if a new particle needs to be created
     if (particleTimer <= 0)              //if the timer is below 0, create particle
     {
-      Serial.print("Attempting particle... ");
       shouldCreateParticle = true;
       particleTimer += 1; //add one to the timer instead of setting as one because it allows for more granular control of rate
     }
@@ -210,9 +210,7 @@ class ParticleGenerator : Generator
         if (particles[pi].life <= 0) //particle is dead if life is less than 0, and can be replaced by a new particle
         {
           createParticle(pi); //create particle
-          Serial.print("Particle Created at ");
-          Serial.println(pi);
-          return; //break from loop as particle has been created
+          return;             //break from loop as particle has been created
         }
       }
     }
@@ -302,6 +300,30 @@ public:
   void setPalette(Palette pal)
   {
     palette = pal;
+  }
+  void setPreset(float pDecay, float tDecay, int iMethod, int cMethod, float range, float fStrength, RgbColor fColor, int pMethod, int vMethod, float pV1, float pV2, float vV1, float vV2, int cAttribute, int caMethod, float aV1, float aV2, float aV3)
+  {
+    particleDecay = pDecay;
+    timerDecay = tDecay;
+
+    intensityMethod = (IntensityMethod)iMethod;
+    colorMethod = (ColorMethod)cMethod;
+    distanceScalar = range;
+    fog.influence = fStrength;
+    fog.color = fColor;
+
+    posInitMethod = (AttrInitMethod)pMethod;
+    velInitMethod = (AttrInitMethod)vMethod;
+    posInitValue1 = pV1;
+    posInitValue2 = pV2;
+    velInitValue1 = vV1;
+    velInitValue2 = vV2;
+
+    calculatedAttribute = (DerivativeLevel)cAttribute;
+    calcMethod = (AttrCalcMethod)caMethod;
+    attrValue1 = aV1;
+    attrValue2 = aV2;
+    attrValue3 = aV3;
   }
   void update(float delta)
   {

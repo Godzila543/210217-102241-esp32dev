@@ -9,8 +9,6 @@ const int ws_port = 1337;
 
 AsyncWebServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(1337);
-char out_buf[1024];
-char in_buf[1024];
 
 /***********************************************************
    Functions
@@ -47,26 +45,7 @@ void onWebSocketEvent(uint8_t client_num,
     // Print out raw message
     Serial.printf("[%u] Received text: %s\n", client_num, payload);
 
-    //case for if the client is requesting data
-    if (strncmp((char *)payload, "rqst", 4) == 0)
-    {
-      File DBRead = SPIFFS.open("/database.json");
-      if (!DBRead)
-      {
-        Serial.println("Failed to open file for reading");
-        return;
-      }
-      int i = 0;
-      while (DBRead.available())
-      {
-        out_buf[i] = DBRead.read();
-        i++;
-      }
-      out_buf[i] = '\0';
-      DBRead.close();
-      webSocket.sendTXT(client_num, out_buf);
-    }
-    else if (strncmp((char *)payload, "data", 4) == 0)
+    if (strncmp((char *)payload, "data", 4) == 0)
     {
       File DBFile = SPIFFS.open("/database.json", FILE_WRITE);
       if (!DBFile)

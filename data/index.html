@@ -102,11 +102,11 @@
 											:rules="rules">
 										</v-select>
 										<v-slider v-show="newPreset.aM=='Constant'" label="Attribute Value" thumb-label="always"
-											v-model=newPreset.aV :min="(newPreset.cA=='Position') ? 0 : -10"
-											:max="(newPreset.cA=='Position') ? 900 : 10" step=0.1></v-slider>
+											v-model=newPreset.aV :min="(newPreset.cA=='Position') ? 0 : -1"
+											:max="(newPreset.cA=='Position') ? 900 : 1" step=0.01></v-slider>
 										<v-range-slider v-show="newPreset.aM=='Scaled over Life'" label="Attribute Range"
-											thumb-label="always" v-model=newPreset.aR :min="(newPreset.cA=='Position') ? 0 : -10"
-											:max="(newPreset.cA=='Position') ? 900 : 10" step=0.1>
+											thumb-label="always" v-model=newPreset.aR :min="(newPreset.cA=='Position') ? 0 : -1"
+											:max="(newPreset.cA=='Position') ? 900 : 1" step=0.01>
 										</v-range-slider>
 									</v-container>
 								</v-form>
@@ -219,8 +219,9 @@
 			</v-container>
 			<!--SETTINGS TAB-->
 			<v-container v-show="activeTab == 'Settings'">
-				<v-btn @click="requestDatabase()">Request Database</v-btn>
-				<v-btn @click="console.log(database)">Log Database</v-btn>
+				<v-btn @click="requestDatabase(vm)">Request Database</v-btn>
+				<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
+				<v-btn @click="connectWebsocket(vm, websocketAddress)">Manual Connect</v-btn>
 			</v-container>
 		</v-main>
 		<v-bottom-navigation fixed v-model="activeTab" v-show="!presetCreationDialog">
@@ -259,50 +260,57 @@
 		},
 		created() {
 			this.$vuetify.theme.dark = true
-			var vm = this
-			this.requestDatabase(vm)
+			this.vm = this
+			this.requestDatabase(this.vm)
 
-			console.log("Starting connection to WebSocket Server")
-			this.connection = new WebSocket("ws://192.168.1.9:1337")
+			this.connectWebsocket(this.vm, "ws://192.168.1.9:1337")
 
-			this.connection.onmessage = function (event) {
-				console.log("Recieved: " + event.data)
-				vm.database = JSON.parse(event.data)
-			}
 
-			this.connection.onopen = function (event) {
-				console.log(event.data)
-				console.log("Successfully connected to the ESP32 websocket server")
-				vm.disconnectedFromWebSocket = false
-			}
-
-			this.connection.onerror = function (event) {
-				console.log("ERROR: " + event.data)
-			}
-
-			this.connection.onclose = function (event) {
-				console.log(event.data)
-				console.log("Disconnected from ESP32 websocket server")
-				vm.disconnectedFromWebSocket = true
-			}
 		},
 		methods: {
+			connectWebsocket(vm, address) {
+				console.log("Starting connection to WebSocket Server: " + address)
+				vm.connection = new WebSocket(address)
+
+				vm.connection.onmessage = function (event) {
+					console.log("Recieved: " + event.data)
+				}
+
+				vm.connection.onopen = function (event) {
+					console.log(event.data)
+					console.log("Successfully connected to the ESP32 websocket server")
+					vm.disconnectedFromWebSocket = false
+				}
+
+				vm.connection.onerror = function (event) {
+					console.log("ERROR: " + event.data)
+				}
+
+				vm.connection.onclose = function (event) {
+					console.log(event.data)
+					console.log("Disconnected from ESP32 websocket server")
+					vm.disconnectedFromWebSocket = true
+				}
+			},
 			sliderToSpeed(value) {
-				return Math.pow((value - 50) / 100, 3)
+				return Math.pow(value / 20, 3)
 			},
 			sliderToDensity(value) {
-				return Math.pow((value - 50) / 20, 3)
+				return Math.pow(value / 20, 3)
 			},
 			sendDatabase() {
 				this.sendMessage("data: " + JSON.stringify(this.database))
 			},
 			requestDatabase(vm) {
+				console.log("Requesting Database")
 				fetch('database.json')
 					.then(function (response) {
 						return response.json()
 					})
 					.then(function (data) {
 						vm.database = data
+						console.log("Database recieved: ")
+						console.log(vm.database)
 					})
 					.catch(function (err) {
 						console.log(err)
@@ -316,13 +324,96 @@
 			},
 			sendPreset(preset) {
 				var preparedPreset = {}
-				if (preset.gen == "gradient") {
+				if (preset.g == "Gradient") {
 					preparedPreset.generator = 0
-				} else if (preset.gen == "particle") {
+					preparedPreset.rate = this.sliderToSpeed(preset.s).toFixed(5)
+					preparedPreset.density = this.sliderToDensity(preset.d).toFixed(5)
+				} else if (preset.g == "Particle") {
 					preparedPreset.generator = 1
+					preparedPreset.particleDecay = 1 / preset.pL
+					preparedPreset.timerDecay = preset.pC / preset.pL / 100
+					preparedPreset.particleDecay = 1 / preset.pL / 100
+					preparedPreset.range = preset.ptR
+					preparedPreset.fogColor = preset.fC
+					preparedPreset.fogInfluence = preset.fT
+					switch (preset.iM) {
+						case 'Fade Out':
+							preparedPreset.intensityMethod = 0
+							break
+						case 'Fade In':
+							preparedPreset.intensityMethod = 1
+							break
+						case 'Fade In and Out':
+							preparedPreset.intensityMethod = 2
+							break
+						case 'Pulse':
+							preparedPreset.intensityMethod = 3
+							break
+					}
+					switch (preset.cM) {
+						case 'Age':
+							preparedPreset.colorMethod = 0
+							break
+						case 'Intensity':
+							preparedPreset.colorMethod = 1
+							break
+						case 'Influence':
+							preparedPreset.colorMethod = 2
+							break
+						case 'Random':
+							preparedPreset.colorMethod = 3
+							break
+					}
+					switch (preset.pI) {
+						case 'Set':
+							preparedPreset.posMethod = 0
+							preparedPreset.posValue1 = preset.pV
+							preparedPreset.posValue2 = 0
+							break
+						case 'Random in Range':
+							preparedPreset.posMethod = 1
+							preparedPreset.posValue1 = preset.pR[0]
+							preparedPreset.posValue2 = preset.pR[1]
+							break
+					}
+					switch (preset.vI) {
+						case 'Set':
+							preparedPreset.velMethod = 0
+							preparedPreset.velValue1 = preset.vV
+							preparedPreset.velValue2 = 0
+							break
+						case 'Random in Range':
+							preparedPreset.velMethod = 1
+							preparedPreset.velValue1 = preset.vR[0]
+							preparedPreset.velValue2 = preset.vR[1]
+							break
+					}
+					switch (preset.cA) {
+						case 'Position':
+							preparedPreset.calculatedAttribute = 0
+							break
+						case 'Velocity':
+							preparedPreset.calculatedAttribute = 1
+							break
+						case 'Acceleration':
+							preparedPreset.calculatedAttribute = 2
+							break
+					}
+					switch (preset.aM) {
+						case 'Constant':
+							preparedPreset.attributeMethod = 0
+							preparedPreset.aValue1 = preset.aV
+							preparedPreset.aValue2 = 0
+							break
+						case 'Scaled over Life':
+							preparedPreset.attributeMethod = 1
+							preparedPreset.aValue1 = preset.aR[0]
+							preparedPreset.aValue2 = preset.aR[1]
+							break
+					}
+					preparedPreset.aValue3 = 0
 				}
-				preparedPreset.rate = this.sliderToSpeed(preset.speed).toFixed(5)
-				preparedPreset.density = this.sliderToDensity(preset.density).toFixed(5)
+
 				this.sendMessage("prst: " + JSON.stringify(preparedPreset))
 			},
 			setPreset(presetName) {
@@ -365,7 +456,7 @@
 			},
 			createPreset(nPre) {
 				var tempTable = JSON.parse(JSON.stringify(nPre))
-				tempTable.fC = tempTable.fC.rgba
+				tempTable.fC.rgba ? tempTable.fC = tempTable.fC.rgba : tempTable.fC = tempTable.fC
 				this.database.presets[nPre.t] = tempTable
 				this.presetCreationDialog = false
 				this.editingPreset = false
@@ -433,6 +524,7 @@
 				gradientForm: false,
 				particleForm: false,
 				ESP32LED: false,
+				websocketAddress: "ws://192.168.0.21:1337",
 				disconnectedFromWebSocket: true,
 				connection: null,
 				newPreset: {},

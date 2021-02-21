@@ -50,10 +50,34 @@ void JSONtoPalette(char *JSONstr)
 
 void JSONtoPreset(char *JSONstr)
 {
-  DynamicJsonDocument doc(512);
+  DynamicJsonDocument doc(2048);
   deserializeJson(doc, JSONstr);
   if (doc["generator"] == 0)
+  {
     DB.gradientGenerator.setPreset(doc["rate"], doc["density"]);
+    DB.gen = GRADIENT;
+  }
   else if (doc["generator"] == 1)
-    Serial.println("you havent implemented this");
+  {
+    DB.particleGenerator.setPreset(
+        doc["particleDecay"],
+        doc["timerDecay"],
+        doc["intensityMethod"],
+        doc["colorMethod"],
+        doc["range"],
+        doc["fogInfluence"],
+        RgbColor(doc["fogColor"]["r"], doc["fogColor"]["g"], doc["fogColor"]["b"]),
+        doc["posMethod"],
+        doc["velMethod"],
+        doc["posValue1"],
+        doc["posValue2"],
+        doc["velValue1"],
+        doc["velValue2"],
+        doc["calculatedAttribute"],
+        doc["attributeMethod"],
+        doc["aValue1"],
+        doc["aValue2"],
+        doc["aValue3"]);
+    DB.gen = PARTICLE;
+  }
 }
