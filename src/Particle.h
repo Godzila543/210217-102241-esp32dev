@@ -1,5 +1,4 @@
 #define NUM_PARTICLES 100
-#define RANGE_MULTIPLIER 1
 //atribute initiation method, used to determine the initial positions, velocities, and accelerations of particles
 enum class AttrInitMethod
 {
@@ -72,24 +71,26 @@ class ParticleGenerator : Generator
 
   Palette palette; //FIXME maybe find better solution
 
-  float particleDecay = 0.025f; //decay will be subtracted from particle life[1, 0] every iteration
-  float timerDecay = 0.40f;     //a timer in the range of [1, 0] will be subtracted by this
+  float particleDecay = 0.025; //decay will be subtracted from particle life[1, 0] every iteration
+  float timerDecay = 0.40;     //a timer in the range of [1, 0] will be subtracted by this
 
   IntensityMethod intensityMethod = IntensityMethod::FADEINOUT; //holds the method to be used to calculate the intensity over the life of a particle
   ColorMethod colorMethod = ColorMethod::LIFE;                  //holds the method used to calculate the color of a particle
-  float distanceScalar = 10;                                    //Multiplied by the inverse of distance to determine the influence a particle has on a pixel
+  float distanceScalar = 10;                                    //Determines the distance where the modifier = 0
   Fog fog;                                                      //Holds the default intensity and color of a refernce
 
   AttrInitMethod posInitMethod = AttrInitMethod::RANDOM; //Initiaion method for position attribute of particles
   AttrInitMethod velInitMethod = AttrInitMethod::RANDOM; //Initiaion method for velocity attribute of particles
-  float posInitValue = 450.0f;                           //Range/value of position
-  float velInitValue = 1.0;                              //Range/value of velocity
+  float posInitValue1 = 0.0;                             //Range/value of position
+  float posInitValue2 = 900.0;                           //Range/value of position
+  float velInitValue1 = -1.0;                            //Range/value of velocity
+  float velInitValue2 = 1.0;
 
   DerivativeLevel calculatedAttribute = DerivativeLevel::ACC; //The attribute of the particle to calculate, which will be integrated to find pos/vel
   AttrCalcMethod calcMethod = AttrCalcMethod::CONSTANT;       //method to calculate value of calculatedAttribute
-  float attrValue1 = 0.0f;                                    //values that can be used differently by different methods
-  float attrValue2 = 0.0f;                                    //values that can be used differently by different methods
-  float attrValue3 = 0.0f;                                    //values that can be used differently by different methods
+  float attrValue1 = 0.0;                                     //values that can be used differently by different methods
+  float attrValue2 = 0.0;                                     //values that can be used differently by different methods
+  float attrValue3 = 0.0;                                     //values that can be used differently by different methods
 
   //DATA USED FOR PARTICLE SIMULATION
   Particle particles[NUM_PARTICLES]; //array of particles
@@ -105,19 +106,19 @@ class ParticleGenerator : Generator
     switch (posInitMethod) //define initial position
     {
     case AttrInitMethod::SET:
-      particles[pi].pos = posInitValue;
+      particles[pi].pos = posInitValue1;
       break;
     case AttrInitMethod::RANDOM:
-      particles[pi].pos = randomFloat(450 - posInitValue, 450 + posInitValue);
+      particles[pi].pos = randomFloat(posInitValue1, posInitValue2);
       break;
     }
     switch (velInitMethod) //define initial velocity
     {
     case AttrInitMethod::SET:
-      particles[pi].vel = velInitValue;
+      particles[pi].vel = velInitValue1;
       break;
     case AttrInitMethod::RANDOM:
-      particles[pi].vel = randomFloat(-velInitValue, velInitValue);
+      particles[pi].vel = randomFloat(velInitValue1, velInitValue2);
       break;
     }
     if (colorMethod == ColorMethod::SET)
@@ -132,7 +133,7 @@ class ParticleGenerator : Generator
     case AttrCalcMethod::CONSTANT:
       return attrValue1;
     case AttrCalcMethod::SCALEDLIFETIME:
-      return 0; //implement lol
+      return (attrValue2 - attrValue1) * life + attrValue1
     }
     return 0; //should never reach here
   }
@@ -154,10 +155,11 @@ class ParticleGenerator : Generator
   }
 
   //TODO create custom methods
-  //Calculates a multiplier for the influence a pixel feels from each particle
+  //Calculates a multiplier for the influence a pixel feels from each particle from [0, 1]
   float calculateDistanceModifier(float distance)
   {
-    return distanceScalar / distance;
+    float modifier = 1 - distance / distanceScalar;
+    return constrain(modifier, 0, 1);
   }
 
   //Calculates the color a pixel should recieve from a particle
@@ -184,9 +186,9 @@ class ParticleGenerator : Generator
   //Calculates the radius of pixels a particle should affect
   int calculateRangeOfInfluence(float life)
   {
-    float averageParticles = timerDecay / particleDecay; //average number of particles at any time
-    float averageDistance = 900 / averageParticles;      //average distance between particles
-    return averageDistance * RANGE_MULTIPLIER;
+    //float averageParticles = timerDecay / particleDecay; //average number of particles at any time
+    //float averageDistance = 900 / averageParticles;      //average distance between particles
+    return distanceScalar;
   }
 
   //Evaluates whether a particle needs to be spawned and will

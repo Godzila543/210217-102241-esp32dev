@@ -74,8 +74,7 @@ void onWebSocketEvent(uint8_t client_num,
         Serial.println("There was an error opening the file for writing");
         return;
       }
-      strcpy(in_buf, (char *)payload + 6);
-      if (DBFile.print(in_buf))
+      if (DBFile.print((char *)payload + 6))
       {
         Serial.println("File was written");
         ;
