@@ -232,7 +232,8 @@
 			<!--SETTINGS TAB-->
 			<v-container v-if="activeTab == 'Settings'">
 				<v-slider min=0 max=100 v-model="brightness" label="Brightness" @input="setBrightness()"></v-slider>
-				<v-slider min=0.1 max=10 step=0.1 v-model="delta" @input="sendDelta" label="Universal Speed"></v-slider>
+				<v-slider min=0.1 max=2 step=0.1 v-model="delta" @input="sendDelta" label="Universal Speed"
+					thumb-label="always"></v-slider>
 				<v-btn @click="requestDatabase(vm)">Request Database</v-btn>
 				<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
 				<v-btn @click="connectWebsocket(vm, websocketAddress)">Manual Connect</v-btn>
@@ -440,7 +441,7 @@
 						case 'Attractor':
 							preparedPreset.attributeMethod = 2
 							preparedPreset.aValue1 = preset.aV1
-							preparedPreset.aValue2 = 1 - preset.aV2
+							preparedPreset.aValue2 = preset.aV2
 							preparedPreset.aValue3 = 0
 					}
 
