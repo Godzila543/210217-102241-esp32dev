@@ -9,7 +9,8 @@ enum class AttrInitMethod
 enum class AttrCalcMethod
 {
   CONSTANT,
-  SCALEDLIFETIME
+  SCALEDLIFETIME,
+  FRICTION
 };
 //determines which attribute should be calculated and which should be determined from derivatives
 enum class DerivativeLevel
@@ -126,7 +127,7 @@ class ParticleGenerator : Generator
   }
 
   //Calculates an attribute during particle simulation
-  float calculateAttribute(float life)
+  float calculateAttribute(float life, float attribute)
   {
     switch (calcMethod)
     {
@@ -134,6 +135,8 @@ class ParticleGenerator : Generator
       return attrValue1;
     case AttrCalcMethod::SCALEDLIFETIME:
       return (attrValue2 - attrValue1) * life + attrValue1;
+    case AttrCalcMethod::FRICTION:
+      return attrValue1 * attribute;
     }
     return 0; //should never reach here
   }
@@ -230,20 +233,20 @@ class ParticleGenerator : Generator
       {
       case DerivativeLevel::ACC: //calculate acceleration and then use newtons method to approximate the integral
       {
-        float acceleration = calculateAttribute(particles[pi].life);
+        float acceleration = calculateAttribute(particles[pi].life, 0);
         particles[pi].vel += acceleration * delta;
         particles[pi].pos += particles[pi].vel * delta;
         break;
       }
       case DerivativeLevel::VEL: //calculate velocity and then use newtons method to approximate the integral
       {
-        particles[pi].vel = calculateAttribute(particles[pi].life);
+        particles[pi].vel = calculateAttribute(particles[pi].life, particles[pi].vel);
         particles[pi].pos += particles[pi].vel * delta;
         break;
       }
       case DerivativeLevel::POS: //calculate position
       {
-        particles[pi].pos = calculateAttribute(particles[pi].life);
+        particles[pi].pos = calculateAttribute(particles[pi].life, particles[pi].pos);
         break;
       }
       }

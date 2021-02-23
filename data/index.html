@@ -60,7 +60,7 @@
 								<v-text-field label="Name" v-model="newPreset.t" :disabled=editingPreset></v-text-field>
 								<v-select label="Generator" :items="generatorTypes" v-model=newPreset.g></v-select>
 								<v-form v-model="gradientForm">
-									<v-container v-show=newPreset.g=='Gradient'>
+									<v-container v-if=newPreset.g=='Gradient'>
 										<v-slider v-model="newPreset.s" min=0 max=10 step=0.1 label="Speed" thumb-label="always"
 											:rules="rules">
 										</v-slider>
@@ -70,7 +70,7 @@
 									</v-container>
 								</v-form>
 								<v-form v-model=particleForm>
-									<v-container v-show="newPreset.g=='Particle'">
+									<v-container v-if="newPreset.g=='Particle'">
 										<v-slider label="Number of Particles" thumb-label="always" v-model=newPreset.pC min=1 max=300
 											:rules="rules">
 										</v-slider>
@@ -95,28 +95,30 @@
 											:rules="rules">
 										</v-select>
 										<v-slider label="Position" thumb-label="always" v-model="newPreset.pV" min=0 max=900
-											v-show="newPreset.pI == 'Set'"></v-slider>
+											v-if="newPreset.pI == 'Set'"></v-slider>
 										<v-range-slider label="Position Range" thumb-label="always" v-model="newPreset.pR" min=0 max=900
-											v-show="newPreset.pI == 'Random in Range'"></v-range-slider>
+											v-if="newPreset.pI == 'Random in Range'"></v-range-slider>
 										<v-select label="Initial Velocity Method" :items="attributeInitMethods" v-model=newPreset.vI
 											:rules="rules">
 										</v-select>
 										<v-slider label="Velocity" thumb-label="always" v-model="newPreset.vV" min=-2 max=2 step=0.1
-											v-show="newPreset.vI == 'Set'"></v-slider>
+											v-if="newPreset.vI == 'Set'"></v-slider>
 										<v-range-slider label="Velocity Range" thumb-label="always" v-model="newPreset.vR" min=-2 max=2
-											step=0.1 v-show="newPreset.vI == 'Random in Range'"></v-range-slider>
+											step=0.1 v-if="newPreset.vI == 'Random in Range'"></v-range-slider>
 										<v-select label="Calculated Attribute" :items="AttributesToCalculate" v-model=newPreset.cA
 											:rules="rules">
 										</v-select>
 										<v-select label="Calculation Method" :items="AttributeCalcMethods" v-model=newPreset.aM
 											:rules="rules">
 										</v-select>
-										<v-slider v-show="newPreset.aM=='Constant'" label="Attribute Value" thumb-label="always"
+										<v-slider v-if="newPreset.aM=='Constant'" label="Attribute Value" thumb-label="always"
 											v-model=newPreset.aV :min="(newPreset.cA=='Position') ? 0 : -1"
 											:max="(newPreset.cA=='Position') ? 900 : 1" step=0.01></v-slider>
-										<v-range-slider v-show="newPreset.aM=='Scaled over Life'" label="Attribute Range"
-											thumb-label="always" v-model=newPreset.aR :min="(newPreset.cA=='Position') ? 0 : -1"
+										<v-range-slider v-if="newPreset.aM=='Scaled over Life'" label="Attribute Range" thumb-label="always"
+											v-model=newPreset.aR :min="(newPreset.cA=='Position') ? 0 : -1"
 											:max="(newPreset.cA=='Position') ? 900 : 1" step=0.01>
+											<v-slider v-if="newPreset.aM=='Friction'" label="Friction Amount" thumb-label="always"
+												v-model=newPreset.aV :min="0" :max="0.1" step=0.001></v-slider>
 										</v-range-slider>
 									</v-container>
 								</v-form>
@@ -228,7 +230,7 @@
 				</v-dialog>
 			</v-container>
 			<!--SETTINGS TAB-->
-			<v-container v-show="activeTab == 'Settings'">
+			<v-container v-if="activeTab == 'Settings'">
 				<v-btn @click="requestDatabase(vm)">Request Database</v-btn>
 				<v-slider min=0.1 max=10 step=0.1 v-model="delta" @changed="sendDelta()" label="Universal Speed"></v-slider>
 				<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
@@ -236,7 +238,7 @@
 			</v-container>
 		</v-main>
 		<!--BOTTOM NAVIGATION-->
-		<v-bottom-navigation fixed v-model="activeTab" v-show="!presetCreationDialog">
+		<v-bottom-navigation fixed v-model="activeTab" v-if="!presetCreationDialog">
 			<v-btn value="Presets">
 				<span>Presets</span>
 				<v-icon>mdi-wrench</v-icon>
@@ -426,6 +428,9 @@
 							preparedPreset.aValue1 = preset.aR[0]
 							preparedPreset.aValue2 = preset.aR[1]
 							break
+						case 'Friction':
+							preparedPreset.attributeMethod = 2
+							preparedPreset.aValue1 = 1 - preset.aV
 					}
 					preparedPreset.aValue3 = 0
 				}
