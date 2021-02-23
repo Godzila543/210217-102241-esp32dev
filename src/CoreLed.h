@@ -29,6 +29,7 @@ struct Database
   ParticleGenerator particleGenerator;
   Palette palette;
   genType gen = PARTICLE;
+  float delta = 1;
 };
 
 Database DB;

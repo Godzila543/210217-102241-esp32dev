@@ -12,10 +12,20 @@
 <body>
 	<v-app id='app'>
 		<v-main>
-			<!-- WEBSOCKET SERVER POPUP -->
-			<v-dialog v-model="disconnectedFromWebSocket" width="40vw">
-				<div class="text-h4">Waiting for WebSocket Connection...</div>
-			</v-dialog>
+			<!--Alerts-->
+			<v-container d-flex justify-center>
+				<v-alert v-if="websocketState=='Connecting'" type="warning" outlined max-width="400px">
+					Connecting to WebSocket...
+
+				</v-alert>
+				<v-alert v-if="websocketState=='ConnectedAlert'" dismissable type="success" outlined max-width="400px">
+					Connected to WebSocket
+				</v-alert>
+				<v-alert v-if="websocketState=='Failed'" type="error" max-width="400px">
+					Failed to Connect
+					<v-btn @click="connectWebsocket(vm, 'ws://192.168.1.9:1337')">Retry</v-btn>
+				</v-alert>
+			</v-container>
 			<!-- PRESEST TAB -->
 			<v-container fluid v-if="activeTab == 'Presets'">
 				<!-- CARD FOR EACH PRESET -->
@@ -51,23 +61,23 @@
 								<v-select label="Generator" :items="generatorTypes" v-model=newPreset.g></v-select>
 								<v-form v-model="gradientForm">
 									<v-container v-show=newPreset.g=='Gradient'>
-										<v-slider v-model="newPreset.s" min=-10 max=10 step=0.1 label="Speed" thumb-label="always"
+										<v-slider v-model="newPreset.s" min=0 max=10 step=0.1 label="Speed" thumb-label="always"
 											:rules="rules">
 										</v-slider>
-										<v-slider v-model="newPreset.d" min=-10 max=10 step=0.1 label="Density" thumb-label="always"
+										<v-slider v-model="newPreset.d" min=0 max=10 step=0.1 label="Density" thumb-label="always"
 											:rules="rules">
 										</v-slider>
 									</v-container>
 								</v-form>
 								<v-form v-model=particleForm>
 									<v-container v-show="newPreset.g=='Particle'">
-										<v-slider label="Number of Particles" thumb-label="always" v-model=newPreset.pC min=0 max=100
+										<v-slider label="Number of Particles" thumb-label="always" v-model=newPreset.pC min=1 max=300
 											:rules="rules">
 										</v-slider>
 										<v-slider label="Particle Lifetime" thumb-label="always" v-model="newPreset.pL" min=0.1 max=10
 											:rules="rules" step=0.1>
 										</v-slider>
-										<v-slider label="Range of Influence" thumb-label="always" v-model=newPreset.ptR min=0 max=300
+										<v-slider label="Range of Influence" thumb-label="always" v-model=newPreset.ptR min=1 max=300
 											:rules="rules">
 										</v-slider>
 										<v-row class="pb-8">
@@ -91,9 +101,9 @@
 										<v-select label="Initial Velocity Method" :items="attributeInitMethods" v-model=newPreset.vI
 											:rules="rules">
 										</v-select>
-										<v-slider label="Velocity" thumb-label="always" v-model="newPreset.vV" min=-20 max=20 step=0.1
+										<v-slider label="Velocity" thumb-label="always" v-model="newPreset.vV" min=-2 max=2 step=0.1
 											v-show="newPreset.vI == 'Set'"></v-slider>
-										<v-range-slider label="Velocity Range" thumb-label="always" v-model="newPreset.vR" min=-20 max=20
+										<v-range-slider label="Velocity Range" thumb-label="always" v-model="newPreset.vR" min=-2 max=2
 											step=0.1 v-show="newPreset.vI == 'Random in Range'"></v-range-slider>
 										<v-select label="Calculated Attribute" :items="AttributesToCalculate" v-model=newPreset.cA
 											:rules="rules">
@@ -220,10 +230,12 @@
 			<!--SETTINGS TAB-->
 			<v-container v-show="activeTab == 'Settings'">
 				<v-btn @click="requestDatabase(vm)">Request Database</v-btn>
+				<v-slider min=0.1 max=10 step=0.1 v-model="delta" @changed="sendDelta()" label="Universal Speed"></v-slider>
 				<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
 				<v-btn @click="connectWebsocket(vm, websocketAddress)">Manual Connect</v-btn>
 			</v-container>
 		</v-main>
+		<!--BOTTOM NAVIGATION-->
 		<v-bottom-navigation fixed v-model="activeTab" v-show="!presetCreationDialog">
 			<v-btn value="Presets">
 				<span>Presets</span>
@@ -271,6 +283,8 @@
 			connectWebsocket(vm, address) {
 				console.log("Starting connection to WebSocket Server: " + address)
 				vm.connection = new WebSocket(address)
+				vm.websocketState = 'Connecting'
+
 
 				vm.connection.onmessage = function (event) {
 					console.log("Recieved: " + event.data)
@@ -279,7 +293,10 @@
 				vm.connection.onopen = function (event) {
 					console.log(event.data)
 					console.log("Successfully connected to the ESP32 websocket server")
-					vm.disconnectedFromWebSocket = false
+					vm.websocketState = 'ConnectedAlert'
+					setTimeout(function () {
+						vm.websocketState = 'Connected'
+					}, 1000)
 				}
 
 				vm.connection.onerror = function (event) {
@@ -289,14 +306,14 @@
 				vm.connection.onclose = function (event) {
 					console.log(event.data)
 					console.log("Disconnected from ESP32 websocket server")
-					vm.disconnectedFromWebSocket = true
+					vm.websocketState = 'Failed'
 				}
 			},
 			sliderToSpeed(value) {
-				return Math.pow(value / 20, 3)
+				return Math.pow(value / 15, 3)
 			},
 			sliderToDensity(value) {
-				return Math.pow(value / 20, 3)
+				return Math.pow(value / 3, 3)
 			},
 			sendDatabase() {
 				this.sendMessage("data: " + JSON.stringify(this.database))
@@ -326,11 +343,10 @@
 				var preparedPreset = {}
 				if (preset.g == "Gradient") {
 					preparedPreset.generator = 0
-					preparedPreset.rate = this.sliderToSpeed(preset.s).toFixed(5)
-					preparedPreset.density = this.sliderToDensity(preset.d).toFixed(5)
+					preparedPreset.rate = this.sliderToSpeed(preset.s)
+					preparedPreset.density = this.sliderToDensity(preset.d)
 				} else if (preset.g == "Particle") {
 					preparedPreset.generator = 1
-					preparedPreset.particleDecay = 1 / preset.pL
 					preparedPreset.timerDecay = preset.pC / preset.pL / 100
 					preparedPreset.particleDecay = 1 / preset.pL / 100
 					preparedPreset.range = preset.ptR
@@ -429,7 +445,7 @@
 					pC: 0, //particle count
 					pL: 0, //particle life
 					ptR: 0, //particle range
-					fC: {}, //fog color
+					fC: { a: 255, r: 0, b: 0, g: 0 }, //fog color
 					fT: 0, //fog threshhold
 					iM: '',    //intensity method
 					cM: '', //color method
@@ -509,6 +525,9 @@
 			},
 			getGradientString(palette) {
 				return "linear-gradient(30deg," + palette.toString() + ")"
+			},
+			sendDelta() {
+				sendMessage("dlta: " + delta)
 			}
 		},
 		data() {
@@ -519,13 +538,14 @@
 				attributeInitMethods: ['Set', 'Random in Range'],
 				AttributesToCalculate: ['Position', 'Velocity', 'Acceleration'],
 				AttributeCalcMethods: ['Constant', 'Scaled over Life'],
+				delta: 1,
 				rules: [x => !!x],
 				rangeRules: [x => !!x[0] && !!x[1]],
 				gradientForm: false,
 				particleForm: false,
 				ESP32LED: false,
 				websocketAddress: "ws://192.168.0.21:1337",
-				disconnectedFromWebSocket: true,
+				websocketState: "Connecting",
 				connection: null,
 				newPreset: {},
 				newPalette: { title: "", data: ["#FF0000", "#0000FF"] },

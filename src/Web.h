@@ -74,6 +74,11 @@ void onWebSocketEvent(uint8_t client_num,
       Serial.println("Recieved Palette");
       JSONtoPalette((char *)payload + 6);
     }
+    else if (strncmp((char *)payload, "dlta", 4) == 0)
+    {
+      Serial.println("Recieved Delta");
+      DB.delta = atof((char *)payload + 6);
+    }
     break;
   // For everything else: do nothing
   case WStype_BIN:
