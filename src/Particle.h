@@ -1,4 +1,4 @@
-#define NUM_PARTICLES 100
+#define NUM_PARTICLES 300
 //atribute initiation method, used to determine the initial positions, velocities, and accelerations of particles
 enum class AttrInitMethod
 {
@@ -197,25 +197,25 @@ class ParticleGenerator : Generator
   void handleCreation(float delta)
   {
     particleTimer -= timerDecay * delta; //decrement our timer by the decay value
-    bool shouldCreateParticle = false;   //boolean to track if a new particle needs to be created
-    if (particleTimer <= 0)              //if the timer is below 0, create particle
+    int particlesToCreate = 0;           //tracks how many particles need to be created
+    if (particleTimer <= 0)              //if the timer is below 0, create particles
     {
-      shouldCreateParticle = true;
-      particleTimer += 1; //add one to the timer instead of setting as one because it allows for more granular control of rate
+      int particlesToCreate = abs(floor(particleTimer));
+      particleTimer += particlesToCreate; //add the number of particles needed
     }
-    if (shouldCreateParticle)
+    if (particlesToCreate > 0)
     {
       for (int pi = 0; pi < NUM_PARTICLES; pi++) //iterate over particles
       {
         if (particles[pi].life <= 0) //particle is dead if life is less than 0, and can be replaced by a new particle
         {
           createParticle(pi); //create particle
-          return;             //break from loop as particle has been created
+          particlesToCreate -= 1;
+          if (particlesToCreate == 0)
+            return; //break from loop as particle has been created
         }
       }
     }
-    if (shouldCreateParticle)
-      Serial.println("NO ROOM");
   }
 
   //Calculates physics and updates all particles
