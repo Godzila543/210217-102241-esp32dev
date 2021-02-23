@@ -9,11 +9,12 @@ public:
   {
     rate = newRate;
     density = newDensity;
+    age = 0;
   }
 
   void update(float delta)
   {
-    age += rate;
+    age += rate * delta;
   }
 
   RgbColor calculatePixel(Palette palette, int index)

@@ -10,7 +10,7 @@ enum class AttrCalcMethod
 {
   CONSTANT,
   SCALEDLIFETIME,
-  FRICTION
+  ATTRACTOR
 };
 //determines which attribute should be calculated and which should be determined from derivatives
 enum class DerivativeLevel
@@ -135,8 +135,8 @@ class ParticleGenerator : Generator
       return attrValue1;
     case AttrCalcMethod::SCALEDLIFETIME:
       return (attrValue2 - attrValue1) * life + attrValue1;
-    case AttrCalcMethod::FRICTION:
-      return attrValue1 * attribute;
+    case AttrCalcMethod::ATTRACTOR:
+      return attribute + (attrValue1 - attribute) * attrValue2;
     }
     return 0; //should never reach here
   }
@@ -203,7 +203,7 @@ class ParticleGenerator : Generator
     int particlesToCreate = 0;           //tracks how many particles need to be created
     if (particleTimer <= 0)              //if the timer is below 0, create particles
     {
-      int particlesToCreate = abs(floor(particleTimer));
+      particlesToCreate = abs(floor(particleTimer));
       particleTimer += particlesToCreate; //add the number of particles needed
     }
     if (particlesToCreate > 0)
@@ -327,6 +327,11 @@ public:
     attrValue1 = aV1;
     attrValue2 = aV2;
     attrValue3 = aV3;
+
+    for (int i = 0; i < NUM_PARTICLES; i++)
+    {
+      particles[i].life = 0;
+    }
   }
   void update(float delta)
   {
