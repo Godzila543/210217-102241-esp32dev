@@ -55,6 +55,7 @@ void LEDSetup()
 
 void LEDLoop()
 {
+  DB.updatePalette();
   updateStrip(DB.delta);
   calculateStrip();
   strip0.Blt(strip1, 0, 0, 0, 0, strip_PixelCount, 1, LayoutMap);
