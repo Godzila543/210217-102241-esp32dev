@@ -190,11 +190,8 @@ class ParticleGenerator : Generator
       return attrValue1;
     case AttrCalcMethod::SCALEDLIFETIME:
       return (attrValue2 - attrValue1) * life + attrValue1;
-<<<<<<< HEAD
     case AttrCalcMethod::ATTRACTOR:
       return attribute + (attrValue1 - attribute) * attrValue2;
-=======
->>>>>>> origin/InfluenceImprovement
     }
     return 0; //should never reach here
   }
