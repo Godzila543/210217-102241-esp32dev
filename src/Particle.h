@@ -64,6 +64,54 @@ struct PixelData
   ParticleReference refrences[4];
 };
 
+struct CurvePrecalc
+{
+  float b; //control shape of the curve
+  float r; //control maximum range of curve at i=1
+  float a;         //precalc value required for computing the curve
+  float precalc[450]; //holds precalc info
+  
+  float calculateCurve(float distance)
+  {
+    return (1/(pow(b*distance/r, 2)+1)-a)/(1-a) - 1;
+  }
+  void fillCurve()
+  {
+    int i = 0;
+    for (auto& val : precalc)
+    {
+      val = max(-1.0f, calculateCurve(i));
+      i++;
+    }
+  }
+  void updateValues(float cF, float pR)
+  {
+    b = cF;
+    r = pR;
+    a = 1 / (b * b + 1);
+    fillCurve();
+  }
+  float getInfluence(int distance, float intensity)
+  {
+    return precalc[abs(distance)] + intensity;
+  }
+  float calculateInfluence(float distance, float intensity)
+  {
+    return max(0.0f, calculateCurve(distance) + intensity);
+  }
+  int calculateRangeOfInfluence(float i)
+  {
+    return (r/b)*sqrt((1 / ((1-a)*(1-i)+a) ) - 1);
+  }
+  float operator[] (int index)
+  {
+    return precalc[index];
+  }
+  CurvePrecalc(float cF = 5, float pR = 10)
+  {
+    updateValues(cF, pR);
+  }
+};
 //Struct which holds configuration information for a ParticleGenerator
 struct ParticleSettings
 {
@@ -73,7 +121,7 @@ struct ParticleSettings
   IntensityMethod intensityMethod = IntensityMethod::FADEINOUT; //holds the method to be used to calculate the intensity over the life of a particle
   ColorMethod colorMethod = ColorMethod::LIFE;                  //holds the method used to calculate the color of a particle
   float peakRange = 10;                                         //Determines the distance where the modifier = 0
-  float edgeValue = 0.005;                                      //The lowest influence on a particle at maximum intensity
+  float curveFactor = 3;                                      //Affects the shape of the influence curve
   float influencePreCalc;
   Fog fog;                                                      //Holds the default intensity and color of a refernce
 
@@ -104,9 +152,7 @@ class ParticleGenerator : Generator
 
   IntensityMethod intensityMethod; //holds the method to be used to calculate the intensity over the life of a particle
   ColorMethod colorMethod;                  //holds the method used to calculate the color of a particle
-  float peakRange;                                         //Determines the distance where the modifier = 0
-  float edgeValue;                                      //The lowest influence on a particle at maximum intensity
-  float influencePreCalc;
+  CurvePrecalc curvePrecalc;
   Fog fog;                                                      //Holds the default intensity and color of a refernce
 
   AttrInitMethod posInitMethod; //Initiaion method for position attribute of particles
@@ -134,8 +180,7 @@ class ParticleGenerator : Generator
     timerDecay = settings.timerDecay;
     intensityMethod = settings.intensityMethod;
     colorMethod = settings.colorMethod;
-    peakRange = settings.peakRange;
-    edgeValue = settings.edgeValue;
+    curvePrecalc = CurvePrecalc(settings.peakRange, settings.curveFactor);
     fog = settings.fog;
     posInitMethod = settings.posInitMethod;
     velInitMethod = settings.velInitMethod;
@@ -148,8 +193,6 @@ class ParticleGenerator : Generator
     attrValue1 = settings.attrValue1;
     attrValue2 = settings.attrValue2;
     attrValue3 = settings.attrValue3;
-
-    influencePreCalc = peakRange * peakRange * edgeValue;
   }
   
   //METHODS
@@ -207,21 +250,14 @@ class ParticleGenerator : Generator
       return 1 - abs(1 - 2 * life);
     }
     return life; //need to implement more interesting methods
-  }
-
-  //TODO create custom methods
-  //Calculates a multiplier for the influence a pixel feels from each particle from [0, 1]
-  float calculateDistanceModifier(float distance)
-  {
-    float modifier = influencePreCalc / (distance*distance+influencePreCalc);
-    return modifier - edgeValue;
-  }
+  } 
+  
 
   //Calculates the color a pixel should recieve from a particle
   RgbColor calculateColor(Particle p, float distance)
   {
     float intensity = calculateIntensity(p.life);
-    float influence = intensity * calculateDistanceModifier(distance);
+    float influence = curvePrecalc.getInfluence(distance, intensity);
     switch (colorMethod)
     {
     case ColorMethod::LIFE:
@@ -235,15 +271,6 @@ class ParticleGenerator : Generator
     }
 
     return RgbColor(255, 255, 255); //execution should not reach here
-  }
-
-  //TODO enhance this function to account for other shtuff
-  //Calculates the radius of pixels a particle should affect
-  int calculateRangeOfInfluence(float intensity)
-  {
-    //float averageParticles = timerDecay / particleDecay; //average number of particles at any time
-    //float averageDistance = 900 / averageParticles;      //average distance between particles
-    return sqrt((influencePreCalc*intensity)/edgeValue);
   }
 
   //Evaluates whether a particle needs to be spawned and will
@@ -308,13 +335,13 @@ class ParticleGenerator : Generator
       particles[pi].pos = fmod(particles[pi].pos, 900); //wrap particles who pass the boundaries of the simulation area
 
       float intensity = calculateIntensity(particles[pi].life);
-      int rangeOfInfluence = calculateRangeOfInfluence(intensity);
+      int rangeOfInfluence = curvePrecalc.calculateRangeOfInfluence(intensity);
       particles[pi].life -= particleDecay * delta;                                                      //decrement our life
       for (int i = particles[pi].pos - rangeOfInfluence; i < particles[pi].pos + rangeOfInfluence; i++) //iterate over all pixels within the range of influence of the particle
       {
         int pixI = mod(i, 900);                      //index of pixel, particle effects will wrap around to the beginning
         float distance = abs(particles[pi].pos - i); //distance from particle to pixel
-        float influence = calculateDistanceModifier(distance) * intensity;
+        float influence = curvePrecalc.getInfluence(distance, intensity);
         if (influence > pixeldata[pixI].refrences[0].influence) //if the particle has more influence than the most influential particle, shift to make room and replace
         {
           pixeldata[pixI].refrences[3] = pixeldata[pixI].refrences[2];
