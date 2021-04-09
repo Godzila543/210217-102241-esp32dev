@@ -69,6 +69,7 @@ struct CurvePrecalc
   float b; //control shape of the curve
   float r; //control maximum range of curve at i=1
   float a;         //precalc value required for computing the curve
+  bool accurate;   //Determines whether to use the precalc values (int vs float distance)
   float precalc[450]; //holds precalc info
   
   float calculateCurve(float distance)
@@ -91,9 +92,12 @@ struct CurvePrecalc
     a = 1 / (b * b + 1);
     fillCurve();
   }
-  float getInfluence(int distance, float intensity)
+  float getInfluence(float distance, float intensity)
   {
-    return precalc[abs(distance)] + intensity;
+    if (accurate)
+      return calculateInfluence(distance, intensity);
+    else
+      return precalc[abs((int)distance)] + intensity;
   }
   float calculateInfluence(float distance, float intensity)
   {
@@ -122,7 +126,7 @@ struct ParticleSettings
   ColorMethod colorMethod = ColorMethod::LIFE;                  //holds the method used to calculate the color of a particle
   float peakRange = 10;                                         //Determines the distance where the modifier = 0
   float curveFactor = 3;                                      //Affects the shape of the influence curve
-  float influencePreCalc;
+  bool accurate = false;                                        //influence is calculated on the spot rather than cached
   Fog fog;                                                      //Holds the default intensity and color of a refernce
 
   AttrInitMethod posInitMethod = AttrInitMethod::RANDOM; //Initiaion method for position attribute of particles
@@ -181,6 +185,7 @@ class ParticleGenerator : Generator
     intensityMethod = settings.intensityMethod;
     colorMethod = settings.colorMethod;
     curvePrecalc = CurvePrecalc(settings.peakRange, settings.curveFactor);
+    curvePrecalc.accurate = settings.accurate;
     fog = settings.fog;
     posInitMethod = settings.posInitMethod;
     velInitMethod = settings.velInitMethod;
