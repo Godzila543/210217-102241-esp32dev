@@ -45,6 +45,9 @@ struct Database
 		particleGenerator.setPalette(palette); //FIXME this some dumb shit
 		cyclesSincePalette++;
 	}
+	Database()
+	{
+	}
 };
 
 Database DB;
@@ -79,25 +82,28 @@ void JSONtoPreset(char *JSONstr)
 	}
 	else if (doc["generator"] == 1)
 	{
-		DB.particleGenerator.setPreset(
-			doc["particleDecay"],
-			doc["timerDecay"],
-			doc["intensityMethod"],
-			doc["colorMethod"],
-			doc["range"],
-			doc["fogInfluence"],
-			RgbColor(doc["fogColor"]["r"], doc["fogColor"]["g"], doc["fogColor"]["b"]),
-			doc["posMethod"],
-			doc["velMethod"],
-			doc["posValue1"],
-			doc["posValue2"],
-			doc["velValue1"],
-			doc["velValue2"],
-			doc["calculatedAttribute"],
-			doc["attributeMethod"],
-			doc["aValue1"],
-			doc["aValue2"],
-			doc["aValue3"]);
+		ParticleSettings set;
+		set.particleDecay = doc["particleDecay"],
+		set.timerDecay = doc["timerDecay"],
+		set.intensityMethod = (IntensityMethod)(int)doc["intensityMethod"],
+		set.colorMethod = (ColorMethod)(int)doc["colorMethod"],
+		set.peakRange = doc["range"],
+		set.edgeValue = doc["edgeValue"],
+		set.fog.influence = doc["fogInfluence"],
+		set.fog.color = RgbColor(doc["fogColor"]["r"], doc["fogColor"]["g"], doc["fogColor"]["b"]),
+		set.posInitMethod = (AttrInitMethod)(int)doc["posMethod"],
+		set.velInitMethod = (AttrInitMethod)(int)doc["velMethod"],
+		set.posInitValue1 = doc["posValue1"],
+		set.posInitValue2 = doc["posValue2"],
+		set.velInitValue1 = doc["velValue1"],
+		set.velInitValue2 = doc["velValue2"],
+		set.calculatedAttribute = (DerivativeLevel)(int)doc["calculatedAttribute"],
+		set.calcMethod = (AttrCalcMethod)(int)doc["attributeMethod"],
+		set.attrValue1 = doc["aValue1"],
+		set.attrValue2 = doc["aValue2"],
+		set.attrValue3 = doc["aValue3"];
+
+		DB.particleGenerator.setPreset(set);
 		DB.gen = PARTICLE;
 	}
 }

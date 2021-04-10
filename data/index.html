@@ -80,6 +80,9 @@
 										<v-slider label="Range of Influence" thumb-label="always" v-model=newPreset.ptR
 											min=1 max=300 :rules="rules">
 										</v-slider>
+										<v-slider label="Edge Value" thumb-label="always" v-model=newPreset.ptE
+											min=0.001 max=0.05 step=0.001 :rules="rules">
+										</v-slider>
 										<v-row class="pb-8">
 											<span>Fog Color: </span>
 											<v-spacer></v-spacer>
@@ -248,9 +251,21 @@
 				<v-slider min=0 max=100 v-model="brightness" label="Brightness" @input="setBrightness()"></v-slider>
 				<v-slider min=0.1 max=2 step=0.1 v-model="delta" @input="sendDelta" label="Universal Speed"
 					thumb-label="always"></v-slider>
-				<v-btn @click="requestDatabase(vm)">Request Database</v-btn>
-				<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
-				<v-btn @click="connectWebsocket(vm, websocketAddress)">Manual Connect</v-btn>
+				<v-expansion-panels>
+					<v-expansion-panel>
+						<v-expansion-panel-header>Advanced Settings</v-expansion-panel-header>
+						<v-expansion-panel-content>
+							<v-btn @click="requestDatabase(vm)">Request Database</v-btn>
+							<v-btn @click="sendDatabase()">Send Database</v-btn>
+							<v-btn @click="connectWebsocket(vm, websocketAddress)">Manual Connect</v-btn>
+							<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
+							<v-btn><a download href="./database.json">Download Database</a></v-btn>
+							<v-btn @click="fileToDatabase">Upload Database</v-btn>
+							<v-file-input @change="fileInputChanged" accept=".json" label="Database File">
+							</v-file-input>
+						</v-expansion-panel-content>
+					</v-expansion-panel>
+				</v-expansion-panels>
 			</v-container>
 		</v-main>
 		<!--BOTTOM NAVIGATION-->
@@ -369,6 +384,7 @@
 					preparedPreset.timerDecay = preset.pC / preset.pL / 100
 					preparedPreset.particleDecay = 1 / preset.pL / 100
 					preparedPreset.range = preset.ptR
+					preparedPreset.edgeValue = preset.ptE
 					preparedPreset.fogColor = preset.fC
 					preparedPreset.fogInfluence = preset.fT
 					switch (preset.iM) {
@@ -472,6 +488,7 @@
 					pC: 0, //particle count
 					pL: 0, //particle life
 					ptR: 0, //particle range
+					ptE: 0.001, //edge value
 					fC: { a: 255, r: 0, b: 0, g: 0 }, //fog color
 					fT: 0, //fog threshhold
 					iM: '',    //intensity method
@@ -565,6 +582,18 @@
 				this.sendMessage("brgt: " + this.brightness / 100)
 				this.sendPalette(this.database.palettes[paletteName])
 			},
+			fileInputChanged(file) {
+				var vm = this
+				file.text().then(text => vm.databaseString = text)
+			},
+			fileToDatabase() {
+				if (this.databaseString.length != 0) {
+					this.database = JSON.parse(this.databaseString)
+				}
+				else {
+					console.log("Select a file")
+				}
+			},
 		},
 		data() {
 			return {
@@ -596,6 +625,7 @@
 				activePalette: '',
 				activeTab: 'presets',
 				database: { presets: {}, palettes: {} },
+				databaseString: "",
 				brightness: 100,
 			}
 		}
