@@ -88,7 +88,7 @@ void JSONtoPreset(char *JSONstr)
 		set.intensityMethod = (IntensityMethod)(int)doc["intensityMethod"],
 		set.colorMethod = (ColorMethod)(int)doc["colorMethod"],
 		set.peakRange = doc["range"],
-		set.edgeValue = doc["edgeValue"],
+		set.curveFactor = doc["curveFactor"],
 		set.fog.influence = doc["fogInfluence"],
 		set.fog.color = RgbColor(doc["fogColor"]["r"], doc["fogColor"]["g"], doc["fogColor"]["b"]),
 		set.posInitMethod = (AttrInitMethod)(int)doc["posMethod"],

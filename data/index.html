@@ -57,7 +57,8 @@
 
 						<v-card-actions>
 							<v-container>
-								<v-text-field label="Name" v-model="newPreset.t" :disabled=editingPreset></v-text-field>
+								<v-text-field label="Name" v-model="newPreset.t" :disabled=editingPreset>
+								</v-text-field>
 								<v-select label="Generator" :items="generatorTypes" v-model=newPreset.g></v-select>
 								<v-form v-model="gradientForm">
 									<v-container v-if=newPreset.g=='Gradient'>
@@ -80,8 +81,8 @@
 										<v-slider label="Range of Influence" thumb-label="always" v-model=newPreset.ptR
 											min=1 max=300 :rules="rules">
 										</v-slider>
-										<v-slider label="Edge Value" thumb-label="always" v-model=newPreset.ptE
-											min=0.001 max=0.05 step=0.001 :rules="rules">
+										<v-slider label="Curve Factor" thumb-label="always" v-model=newPreset.cF min=0.1
+											max=10 step=0.1 :rules="rules">
 										</v-slider>
 										<v-row class="pb-8">
 											<span>Fog Color: </span>
@@ -111,7 +112,7 @@
 										<v-slider label="Velocity" thumb-label="always" v-model="newPreset.vV" min=-2
 											max=2 step=0.1 v-if="newPreset.vI == 'Set'"></v-slider>
 										<v-range-slider label="Velocity Range" thumb-label="always"
-											v-model="newPreset.vR" min=-2 max=2 step=0.1
+											v-model="newPreset.vR" min=-5 max=5 step=0.1
 											v-if="newPreset.vI == 'Random in Range'"></v-range-slider>
 										<v-select label="Calculated Attribute" :items="AttributesToCalculate"
 											v-model=newPreset.cA :rules="rules">
@@ -125,10 +126,11 @@
 											:max="(newPreset.cA=='Position') ? 900 : 1" step=0.01></v-slider>
 										<v-range-slider v-if="newPreset.aM=='Scaled over Life'" label="Attribute Range"
 											thumb-label="always" v-model=newPreset.aR
-											:min="(newPreset.cA=='Position') ? 0 : -1"
-											:max="(newPreset.cA=='Position') ? 900 : 1" step=0.01></v-range-slider>
+											:min="(newPreset.cA=='Position') ? 0 : -5"
+											:max="(newPreset.cA=='Position') ? 900 : 5" step=0.01></v-range-slider>
 										<v-slider v-if="newPreset.aM=='Attractor'" label="Attraction Amount"
-											thumb-label="always" v-model=newPreset.aV2 :min="0" :max="0.1" step=0.001>
+											thumb-label="always" v-model=newPreset.aV2 :min="-0.1" :max="0.1"
+											step=0.001>
 										</v-slider>
 										</v-range-slider>
 									</v-container>
@@ -141,7 +143,7 @@
 										"Delete Preset" : "Cancel"}}</v-btn>
 									<v-spacer></v-spacer>
 									<v-btn color="primary" text @click="createPreset(newPreset)"
-										:disabled="newPreset.g=='Gradient' ? !gradientForm : !particleForm">
+										:disabled="newPreset.g=='Gradient' ? !gradientForm : !particleForm || newPreset.t.length == 0">
 										{{editingPreset ? "Modify Preset" : "Create Preset"}}
 									</v-btn>
 								</v-row>
@@ -198,9 +200,10 @@
 						</v-card-title>
 						<v-card-actions>
 							<v-container>
-								<v-text-field label="Name" v-model="newPalette.title" :disabled=editingPalette>
+								<v-text-field :rules="rules" label="Name" v-model="newPalette.title"
+									:disabled=editingPalette>
 								</v-text-field>
-								<v-row v-for="(color, index) in newPalette.data" :key="color">
+								<v-row v-for="(color, index) in newPalette.data" :key="index">
 									<v-color-picker canvas-height="100px" v-model="newPalette.data[index]" hide-inputs>
 									</v-color-picker>
 									<v-btn icon color="accent" @click="newPalette.data.splice(index, 1)">
@@ -216,7 +219,7 @@
 										"Delete Palette" : "Cancel"}}</v-btn>
 									<v-spacer></v-spacer>
 									<v-btn color="primary" @click="createPalette()"
-										:disabled="newPalette.data.length<2 || newPalette.data.length>7">
+										:disabled="newPalette.data.length<2 || newPalette.data.length>8 || newPalette.title.length == 0">
 										{{editingPalette ? "Modify Palette" : "Create Palette"}}
 									</v-btn>
 								</v-row>
@@ -384,7 +387,7 @@
 					preparedPreset.timerDecay = preset.pC / preset.pL / 100
 					preparedPreset.particleDecay = 1 / preset.pL / 100
 					preparedPreset.range = preset.ptR
-					preparedPreset.edgeValue = preset.ptE
+					preparedPreset.curveFactor = preset.cF
 					preparedPreset.fogColor = preset.fC
 					preparedPreset.fogInfluence = preset.fT
 					switch (preset.iM) {
@@ -488,7 +491,7 @@
 					pC: 0, //particle count
 					pL: 0, //particle life
 					ptR: 0, //particle range
-					ptE: 0.001, //edge value
+					cF: 5, //curve factor
 					fC: { a: 255, r: 0, b: 0, g: 0 }, //fog color
 					fT: 0, //fog threshhold
 					iM: '',    //intensity method
@@ -545,10 +548,6 @@
 			addColor() {
 				this.newPalette.data.push("#0000FF")
 			},
-			colorUpdated(event) {
-				Vue.set(this.newPalette.data, this.colorIndex, event.target.value)
-				console.log(this.newPalette.data)
-			},
 			createPalette() {
 				this.database.palettes[this.newPalette.title] = this.newPalette.data
 				this.paletteCreationDialog = false
@@ -580,7 +579,7 @@
 			},
 			setBrightness() {
 				this.sendMessage("brgt: " + this.brightness / 100)
-				this.sendPalette(this.database.palettes[paletteName])
+				this.sendPalette(this.database.palettes[this.activePalette])
 			},
 			fileInputChanged(file) {
 				var vm = this
@@ -608,6 +607,8 @@
 				rangeRules: [x => !!x[0] && !!x[1]],
 				gradientForm: false,
 				particleForm: false,
+				presetForm: false,
+				paletteForm: false,
 				ESP32LED: false,
 				websocketAddress: "ws://192.168.0.21:1337",
 				websocketState: "Connecting",
