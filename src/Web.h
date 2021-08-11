@@ -56,7 +56,6 @@ void onWebSocketEvent(uint8_t client_num,
 			if (DBFile.print((char *)payload + 6))
 			{
 				Serial.println("File was written");
-				;
 			}
 			else
 			{

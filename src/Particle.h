@@ -1,5 +1,6 @@
 #define NUM_PARTICLES 300
 #define PRECALC_STEPS 3
+#define NUM_LEDS 900
 //atribute initiation method, used to determine the initial positions, velocities, and accelerations of particles
 enum class AttrInitMethod
 {
@@ -123,7 +124,7 @@ struct ParticleSettings
 	AttrInitMethod posInitMethod = AttrInitMethod::RANDOM; //Initiaion method for position attribute of particles
 	AttrInitMethod velInitMethod = AttrInitMethod::RANDOM; //Initiaion method for velocity attribute of particles
 	float posInitValue1 = 0.0;							   //Range/value of position
-	float posInitValue2 = 900.0;						   //Range/value of position
+	float posInitValue2 = NUM_LEDS;						   //Range/value of position
 	float velInitValue1 = -1.0;							   //Range/value of velocity
 	float velInitValue2 = 1.0;
 
@@ -166,7 +167,7 @@ class ParticleGenerator : Generator
 	//DATA USED FOR PARTICLE SIMULATION
 	Particle particles[NUM_PARTICLES]; //array of particles
 	float particleTimer = 1;		   //timer to determine when a new particle needs to be spawned
-	PixelData pixeldata[900];		   //data stored by each pixel to calculate color
+	PixelData pixeldata[NUM_LEDS];	   //data stored by each pixel to calculate color
 
 	//METHODS
 
@@ -304,14 +305,14 @@ class ParticleGenerator : Generator
 			}
 			}
 			//FIXME fmod is bad for negative values
-			particles[pi].pos = fmod(particles[pi].pos, 900); //wrap particles who pass the boundaries of the simulation area
+			particles[pi].pos = fmod(particles[pi].pos, NUM_LEDS); //wrap particles who pass the boundaries of the simulation area
 
 			float intensity = calculateIntensity(particles[pi].life);
 			int rangeOfInfluence = curvePrecalc.calculateRangeOfInfluence(intensity);
 			particles[pi].life -= particleDecay * delta;													  //decrement our life
 			for (int i = particles[pi].pos - rangeOfInfluence; i < particles[pi].pos + rangeOfInfluence; i++) //iterate over all pixels within the range of influence of the particle
 			{
-				int pixI = mod(i, 900);						 //index of pixel, particle effects will wrap around to the beginning
+				int pixI = mod(i, NUM_LEDS);				 //index of pixel, particle effects will wrap around to the beginning
 				float distance = abs(particles[pi].pos - i); //distance from particle to pixel
 				float influence = curvePrecalc.getInfluence(distance, intensity);
 				if (influence > pixeldata[pixI].refrences[0].influence) //if the particle has more influence than the most influential particle, shift to make room and replace
