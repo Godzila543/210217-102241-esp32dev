@@ -1,4 +1,5 @@
 #define NUM_PARTICLES 300
+#define PRECALC_STEPS 3
 //atribute initiation method, used to determine the initial positions, velocities, and accelerations of particles
 enum class AttrInitMethod
 {
@@ -45,13 +46,6 @@ struct Particle
 	float color;
 };
 
-//a fog which controls the defualt color and influence of a reference
-struct Fog
-{
-	RgbColor color = RgbColor(0, 0, 0);
-	float influence = 3;
-};
-
 //A reference to a specific particle with information used to calculate the color
 struct ParticleReference
 {
@@ -63,14 +57,18 @@ struct ParticleReference
 struct PixelData
 {
 	ParticleReference refrences[4];
+	PixelData()
+	{
+		refrences[3].influence = 1.0f;
+	}
 };
 
 struct CurvePrecalc
 {
-	float b;			//control shape of the curve
-	float r;			//control maximum range of curve at i=1
-	float a;			//precalc value required for computing the curve
-	float precalc[450]; //holds precalc info
+	float b;							//control shape of the curve
+	float r;							//control maximum range of curve at i=1
+	float a;							//precalc value required for computing the curve
+	float precalc[450 * PRECALC_STEPS]; //holds precalc info
 
 	float calculateCurve(float distance)
 	{
@@ -78,10 +76,10 @@ struct CurvePrecalc
 	}
 	void fillCurve()
 	{
-		int i = 0;
+		float i = 0;
 		for (auto &val : precalc)
 		{
-			val = max(-1.0f, calculateCurve(i));
+			val = max(-1.0f, calculateCurve(i / PRECALC_STEPS));
 			i++;
 		}
 	}
@@ -92,9 +90,9 @@ struct CurvePrecalc
 		a = 1 / (b * b + 1);
 		fillCurve();
 	}
-	float getInfluence(int distance, float intensity)
+	float getInfluence(float distance, float intensity)
 	{
-		return precalc[abs(distance)] + intensity;
+		return precalc[static_cast<int>(abs(distance) * PRECALC_STEPS)] + intensity;
 	}
 	float calculateInfluence(float distance, float intensity)
 	{
@@ -102,7 +100,7 @@ struct CurvePrecalc
 	}
 	int calculateRangeOfInfluence(float i)
 	{
-		return (r / b) * sqrt((1 / ((1 - a) * (1 - i) + a)) - 1);
+		return max(2.0, (r / b) * sqrt((1 / ((1 - a) * (1 - i) + a)) - 1));
 	}
 	CurvePrecalc(float cF = 5, float pR = 10)
 	{
@@ -116,10 +114,11 @@ struct ParticleSettings
 	float timerDecay = 0.40;	 //a timer in the range of [1, 0] will be subtracted by this
 
 	IntensityMethod intensityMethod = IntensityMethod::FADEINOUT; //holds the method to be used to calculate the intensity over the life of a particle
+	float intensityValue = 1;									  //holds a value that the intensity calculation can use to customize the effect
 	ColorMethod colorMethod = ColorMethod::LIFE;				  //holds the method used to calculate the color of a particle
 	float peakRange = 10;										  //Determines the distance where the modifier = 0
 	float curveFactor = 3;										  //Affects the shape of the influence curve
-	Fog fog;													  //Holds the default intensity and color of a refernce
+	float referenceDecay = 0;
 
 	AttrInitMethod posInitMethod = AttrInitMethod::RANDOM; //Initiaion method for position attribute of particles
 	AttrInitMethod velInitMethod = AttrInitMethod::RANDOM; //Initiaion method for velocity attribute of particles
@@ -146,9 +145,10 @@ class ParticleGenerator : Generator
 	float timerDecay;	 //a timer in the range of [1, 0] will be subtracted by this
 
 	IntensityMethod intensityMethod; //holds the method to be used to calculate the intensity over the life of a particle
+	float intensityValue = 1;		 //holds a value that the intensity calculation can use to customize the effect
 	ColorMethod colorMethod;		 //holds the method used to calculate the color of a particle
 	CurvePrecalc curvePrecalc;
-	Fog fog; //Holds the default intensity and color of a refernce
+	float referenceDecay;
 
 	AttrInitMethod posInitMethod; //Initiaion method for position attribute of particles
 	AttrInitMethod velInitMethod; //Initiaion method for velocity attribute of particles
@@ -223,7 +223,7 @@ class ParticleGenerator : Generator
 		case IntensityMethod::FADEINOUT:
 			return 1 - abs(1 - 2 * life);
 		case IntensityMethod::PULSE:
-			return life; //TODO pulsate (sin?)
+			return 0.5f - 0.5f * cosf(6.28f * life * intensityValue);
 		}
 		return 0; //failsafe
 	}
@@ -316,7 +316,6 @@ class ParticleGenerator : Generator
 				float influence = curvePrecalc.getInfluence(distance, intensity);
 				if (influence > pixeldata[pixI].refrences[0].influence) //if the particle has more influence than the most influential particle, shift to make room and replace
 				{
-					pixeldata[pixI].refrences[3] = pixeldata[pixI].refrences[2];
 					pixeldata[pixI].refrences[2] = pixeldata[pixI].refrences[1];
 					pixeldata[pixI].refrences[1] = pixeldata[pixI].refrences[0];
 					pixeldata[pixI].refrences[0].influence = influence;
@@ -324,21 +323,14 @@ class ParticleGenerator : Generator
 				}
 				else if (influence > pixeldata[pixI].refrences[1].influence) //if the particle has more influence than the second most influential particle, shift to make room and replace
 				{
-					pixeldata[pixI].refrences[3] = pixeldata[pixI].refrences[2];
 					pixeldata[pixI].refrences[2] = pixeldata[pixI].refrences[1];
 					pixeldata[pixI].refrences[1].influence = influence;
 					pixeldata[pixI].refrences[1].color = calculateColor(particles[pi], distance);
 				}
 				else if (influence > pixeldata[pixI].refrences[2].influence) //if the particle has more influence than the third most influential particle, shift to make room and replace
 				{
-					pixeldata[pixI].refrences[3] = pixeldata[pixI].refrences[2];
 					pixeldata[pixI].refrences[2].influence = influence;
 					pixeldata[pixI].refrences[2].color = calculateColor(particles[pi], distance);
-				}
-				else if (influence > pixeldata[pixI].refrences[3].influence) //if the particle has more influence than the least influential particle, replace
-				{
-					pixeldata[pixI].refrences[3].influence = influence;
-					pixeldata[pixI].refrences[3].color = calculateColor(particles[pi], distance);
 				}
 			}
 		}
@@ -346,35 +338,13 @@ class ParticleGenerator : Generator
 
 	void resetParticleReference(int index)
 	{
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 3; i++)
 		{
-			pixeldata[index].refrences[i].influence = fog.influence / 3;
-			pixeldata[index].refrences[i].color = fog.color;
+			pixeldata[index].refrences[i].influence *= referenceDecay;
 		}
 	}
 
 public:
-	//CONSTRUCTOR
-	ParticleGenerator(ParticleSettings settings = ParticleSettings())
-	{
-		particleDecay = settings.particleDecay;
-		timerDecay = settings.timerDecay;
-		intensityMethod = settings.intensityMethod;
-		colorMethod = settings.colorMethod;
-		curvePrecalc = CurvePrecalc(settings.curveFactor, settings.peakRange);
-		fog = settings.fog;
-		posInitMethod = settings.posInitMethod;
-		velInitMethod = settings.velInitMethod;
-		posInitValue1 = settings.posInitValue1;
-		posInitValue2 = settings.posInitValue2;
-		velInitValue1 = settings.velInitValue1;
-		velInitValue2 = settings.velInitValue2;
-		calculatedAttribute = settings.calculatedAttribute;
-		calcMethod = settings.calcMethod;
-		attrValue1 = settings.attrValue1;
-		attrValue2 = settings.attrValue2;
-		attrValue3 = settings.attrValue3;
-	}
 	void setPalette(Palette pal)
 	{
 		palette = pal;
@@ -384,9 +354,10 @@ public:
 		particleDecay = settings.particleDecay;
 		timerDecay = settings.timerDecay;
 		intensityMethod = settings.intensityMethod;
+		intensityValue = settings.intensityValue;
 		colorMethod = settings.colorMethod;
 		curvePrecalc.updateValues(settings.curveFactor, settings.peakRange);
-		fog = settings.fog;
+		referenceDecay = settings.referenceDecay;
 		posInitMethod = settings.posInitMethod;
 		velInitMethod = settings.velInitMethod;
 		posInitValue1 = settings.posInitValue1;
@@ -404,6 +375,12 @@ public:
 			particles[i].life = 0;
 		}
 	}
+	//CONSTRUCTOR
+	ParticleGenerator(ParticleSettings settings = ParticleSettings())
+	{
+		setPreset(settings);
+	}
+
 	void update(float delta)
 	{
 		handleCreation(delta);
