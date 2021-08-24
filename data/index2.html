@@ -1,0 +1,707 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+
+<body>
+	<v-app id='app'>
+		<v-main>
+			<!--Alerts-->
+			<v-container d-flex justify-center>
+				<v-alert v-if="websocketState=='Connecting'" type="warning" outlined max-width="400px">
+					Connecting to WebSocket...
+
+				</v-alert>
+				<v-alert v-if="websocketState=='ConnectedAlert'" dismissable type="success" outlined max-width="400px">
+					Connected to WebSocket
+				</v-alert>
+				<v-alert v-if="websocketState=='Failed'" type="error" max-width="400px">
+					Failed to Connect
+					<v-btn @click="connectWebsocket(vm, 'ws://192.168.1.3:1337')">Retry</v-btn>
+				</v-alert>
+			</v-container>
+			<!-- PRESEST TAB -->
+			<v-container fluid v-if="activeTab == 'Presets'">
+				<!-- CARD FOR EACH PRESET -->
+				<v-flex d-flex>
+					<v-layout wrap>
+						<v-flex md4 v-for="(preset, title) in database.presets" :key="title" class="pa-2">
+							<v-card :color="(title==activePreset) ? 'primary' : 'secondary'" @click="setPreset(title)">
+								<v-card-title>{{title}}</v-card-title>
+								<v-card-actions>
+									<v-btn @click="editPreset(title)">Edit Preset</v-btn>
+									<v-spacer></v-spacer>
+								</v-card-actions>
+							</v-card>
+						</v-flex>
+						<v-flex md12 class="pa-2">
+							<v-btn color="primary" @click="startPresetCreation()" fluid>
+								Create Preset
+							</v-btn>
+						</v-flex>
+					</v-layout>
+				</v-flex>
+				<!--PRESET CREATION DIALOG-->
+				<v-dialog v-model="presetCreationDialog" max-width="800px"
+					:fullscreen="$vuetify.breakpoint.xsOnly ? true : false">
+					<v-card>
+						<v-card-title class="headline grey">
+							{{editingPreset ? "Edit an Existing Preset" : "Create a New Preset"}}
+						</v-card-title>
+
+						<v-card-actions>
+							<v-container>
+								<v-text-field label="Name" v-model="newPreset.name" :disabled=editingPreset>
+								</v-text-field>
+								<v-select label="Generator" :items="generatorTypes" v-model=newPreset.generator>
+								</v-select>
+								<v-container v-show=newPreset.generator=='Gradient'>
+									<v-slider v-model="newPreset.rate" min=0 max=5 step=0.1 label="Speed"
+										thumb-label="always"></v-slider>
+									<v-slider v-model=" newPreset.density" min=0 max=5 step=0.1 label="Density"
+										thumb-label="always"></v-slider>
+								</v-container>
+								<v-container v-if=" newPreset.generator=='Particle'">
+									<v-slider label=" Number of Particles" thumb-label="always"
+										v-model="newPreset.particleCount" min=1 max=300>
+									</v-slider>
+									<v-slider label="Particle Lifetime" thumb-label="always"
+										v-model="newPreset.particleLife" min=0.1 max=10 step=0.1>
+									</v-slider>
+									<v-slider label="Range of Influence" thumb-label="always"
+										v-model="newPreset.particleRange" min=1 max=300>
+									</v-slider>
+									<v-slider label="Curve Factor" thumb-label="always" v-model="newPreset.curveFactor"
+										min=0.1 max=10 step=0.1>
+									</v-slider>
+									<v-slider label="Persistence" thumb-label="always" v-model="newPreset.persistence"
+										min=0 max=1 step=0.01>
+									</v-slider>
+									<v-select label="Intensity Method" :items="intensityMethods"
+										v-model="newPreset.intensityMethod">
+									</v-select>
+									<v-slider label="Number of Pulses" thumb-label="always"
+										v-model="newPreset.intensityValue" min=1 max=30
+										v-if="newPreset.intensityMethod == 'Pulse'"></v-slider>
+									<v-select label="Color Method" :items="colorMethods"
+										v-model="newPreset.colorMethod">
+									</v-select>
+									<v-select label="Initial Position Method" :items="attributeInitMethods"
+										v-model="newPreset.posMethod">
+									</v-select>
+									<v-slider label="Position" thumb-label="always" v-model="newPreset.posRange[0]"
+										min=0 max=900 v-if="newPreset.posMethod == 'Set'"></v-slider>
+									<v-range-slider label="Position Range" thumb-label="always"
+										v-model="newPreset.posRange" min=0 max=900
+										v-if="newPreset.posMethod == 'Random in Range'"></v-range-slider>
+									<v-select label="Initial Velocity Method" :items="attributeInitMethods"
+										v-model="newPreset.velMethod">
+									</v-select>
+									<v-slider label="Velocity" thumb-label="always" v-model="newPreset.velValue" min=-2
+										max=2 step=0.1 v-if="newPreset.velMethod == 'Set'"></v-slider>
+									<v-range-slider label="Velocity Range" thumb-label="always"
+										v-model="newPreset.velRange" min=-5 max=5 step=0.1
+										v-if="newPreset.velMethod == 'Random in Range'"></v-range-slider>
+									<v-select label="Calculated Attribute" :items="AttributesToCalculate"
+										v-model=newPreset.calculatedAttribute>
+									</v-select>
+									<v-select label="Calculation Method" :items="AttributeCalcMethods"
+										v-model=newPreset.attributeMethod>
+									</v-select>
+									<v-slider
+										v-if="newPreset.attributeMethod=='Constant' || newPreset.attributeMethod=='Attractor'"
+										label="Attribute Value" thumb-label="always" v-model=newPreset.aRange[0]
+										:min="(newPreset.calculatedAttribute=='Position') ? 0 : -1"
+										:max="(newPreset.calculatedAttribute=='Position') ? 900 : 1" step=0.01>
+									</v-slider>
+									<v-range-slider v-if="newPreset.attributeMethod=='Scaled over Life'"
+										label="Attribute Range" thumb-label="always" v-model=newPreset.aRange
+										:min="(newPreset.calculatedAttribute=='Position') ? 0 : -5"
+										:max="(newPreset.calculatedAttribute=='Position') ? 900 : 5" step=0.01>
+									</v-range-slider>
+									<v-slider v-if="newPreset.attributeMethod=='Attractor'" label="Attraction Amount"
+										thumb-label="always" v-model=newPreset.aRange[1] :min="-0.1" :max="0.1"
+										step=0.001>
+									</v-slider>
+									</v-range-slider>
+								</v-container>
+								<v-divider></v-divider>
+								<v-row class="pt-8">
+									<v-btn outlined color="accent"
+										@click="presetCreationDialog=false; if(editingPreset) presetDeletionDialog = true">
+										{{editingPreset ?
+										"Delete Preset" : "Cancel"}}</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn color="primary" text @click="createPreset(newPreset)"
+										:disabled="newPreset.name?.length == 0">
+										{{editingPreset ? "Modify Preset" : "Create Preset"}}
+									</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+				<!--PRESET DELETION DIALOG-->
+				<v-dialog v-model="presetDeletionDialog" max-width=400px>
+					<v-card>
+						<v-card-title class="accent">
+							Delete Preset?
+						</v-card-title>
+						<v-card-actions>
+							<v-container>
+								<v-row class="">
+									<v-btn outlined color="primary"
+										@click="presetCreationDialog=true; presetDeletionDialog=false">Cancel
+									</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn plain color="accent" @click="deletePreset(newPreset)">Confirm Delete</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+			</v-container>
+			<v-container v-if="activeTab == 'Palettes'">
+				<!-- CARD FOR EACH PALETTE -->
+				<v-flex d-flex>
+					<v-layout wrap>
+						<v-flex md4 v-for="(palette, title) in database.palettes" :key="title" class="pa-2">
+							<v-card @click="setPalette(title)" class=""
+								:style="{backgroundImage: getGradientString(palette)}" :outlined="title==activePalette">
+								<v-card-title>{{title}}</v-card-title>
+								<v-card-actions>
+									<v-btn @click="editPalette(title)">Edit Palette</v-btn>
+								</v-card-actions>
+							</v-card>
+						</v-flex>
+						<v-flex md12 class="pa-2">
+							<v-btn color="accent" @click="startPaletteCreation()">
+								Create Palette
+							</v-btn>
+						</v-flex>
+					</v-layout>
+				</v-flex>
+				<!--PALETTE CREATION DIALOG-->
+				<v-dialog v-model="paletteCreationDialog" :fullscreen="$vuetify.breakpoint.xsOnly ? true : false"
+					max-width=400px>
+					<v-card>
+						<v-card-title :style="{backgroundImage: getGradientString(newPalette.data)}">
+							{{editingPalette ? "Edit an Existing Palette" : "Create a New Palette"}}
+						</v-card-title>
+						<v-card-actions>
+							<v-container>
+								<v-text-field label="Name" v-model="newPalette.title" :disabled=editingPalette>
+								</v-text-field>
+								<v-row v-for="(color, index) in newPalette.data" :key="index">
+									<v-color-picker canvas-height="100px" v-model="newPalette.data[index]" hide-inputs>
+									</v-color-picker>
+									<v-btn icon color="accent" @click="newPalette.data.splice(index, 1)">
+										<v-icon>mdi-delete-outline</v-icon>
+									</v-btn>
+								</v-row>
+								<v-btn outlined @click="addColor()" :disabled="newPalette.data.length>7">Add Color
+								</v-btn>
+								<v-row class="pt-8">
+									<v-btn outlined color="accent"
+										@click="paletteCreationDialog=false; if(editingPalette) paletteDeletionDialog = true">
+										{{editingPalette ?
+										"Delete Palette" : "Cancel"}}</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn color="primary" @click="createPalette()"
+										:disabled="newPalette.data.length<2 || newPalette.data.length>8 || newPalette.title.length == 0">
+										{{editingPalette ? "Modify Palette" : "Create Palette"}}
+									</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+				<!--PRESET DELETION DIALOG-->
+				<v-dialog v-model="paletteDeletionDialog" max-width=400px>
+					<v-card>
+						<v-card-title class="accent">
+							Delete Palette?
+						</v-card-title>
+						<v-card-actions>
+							<v-container>
+								<v-row class="">
+									<v-btn outlined color="primary"
+										@click="paletteCreationDialog=true; paletteDeletionDialog=false">
+										Cancel
+									</v-btn>
+									<v-spacer></v-spacer>
+									<v-btn plain color="accent" @click="deletePalette(newPalette)">Confirm Delete
+									</v-btn>
+								</v-row>
+							</v-container>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+			</v-container>
+			<!--SETTINGS TAB-->
+			<v-container v-if="activeTab == 'Settings'">
+				<v-slider min=0 max=100 v-model="brightness" label="Brightness" @input="setBrightness()"></v-slider>
+				<v-slider min=0.1 max=2 step=0.1 v-model="delta" @input="sendDelta" label="Universal Speed"
+					thumb-label="always"></v-slider>
+				<v-expansion-panels>
+					<v-expansion-panel>
+						<v-expansion-panel-header>Advanced Settings</v-expansion-panel-header>
+						<v-expansion-panel-content>
+							<v-btn @click="sheetsPresetFetch(vm)">Request Presets</v-btn>
+							<v-btn @click="sheetsPaletteFetch(vm)">Request Palettes</v-btn>
+							<v-btn @click="connectWebsocket(vm, websocketAddress)">Manual Connect</v-btn>
+							<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
+						</v-expansion-panel-content>
+					</v-expansion-panel>
+				</v-expansion-panels>
+			</v-container>
+		</v-main>
+		<!--BOTTOM NAVIGATION-->
+		<v-bottom-navigation fixed v-model="activeTab" v-if="!presetCreationDialog">
+			<v-btn value="Presets">
+				<span>Presets</span>
+				<v-icon>mdi-wrench</v-icon>
+			</v-btn>
+			<v-btn value="Palettes">
+				<span>Palettes</span>
+				<v-icon>mdi-palette</v-icon>
+			</v-btn>
+			<v-btn value="Settings">
+				<span>Settings</span>
+				<v-icon>mdi-settings</v-icon>
+			</v-btn>
+		</v-bottom-navigation>
+	</v-app>
+</body>
+
+</html>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<script>
+	const vuetify = new Vuetify({
+		theme: {
+			dark: true,
+		},
+	})
+	new Vue({
+		el: '#app',
+		vuetify: vuetify,
+		name: 'App',
+		components: {
+
+		},
+		async created() {
+			this.$vuetify.theme.dark = true
+			this.vm = this
+			this.sheetsPresetFetch(this.vm)
+			this.sheetsPaletteFetch(this.vm)
+
+			this.connectWebsocket(this.vm, "ws://192.168.1.3:1337")
+		},
+		methods: {
+			sheetsPresetFetch(vm) {
+				console.log("Requesting Database")
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/fetch/')
+					.then(function (response) {
+						return response.json()
+					})
+					.then(function (data) {
+						const intermediate = data.map((row) => {
+							row.posRange = [row.posValue1, row.posValue2];
+							row.velRange = [row.velValue1, row.velValue2];
+							row.aRange = [row.aValue1, row.aValue2];
+							return [row.name, row]
+						});
+						vm.database.presets = Object.fromEntries(intermediate)
+						console.log("Presets recieved: ")
+						console.log(vm.database)
+					})
+					.catch(function (err) {
+						console.log(err)
+					})
+			},
+			sheetsPresetInsert(nPre) {
+				nPre.posValue1 = nPre.posRange[0]
+				nPre.posValue2 = nPre.posRange[1]
+				nPre.velValue1 = nPre.velRange[0]
+				nPre.velValue2 = nPre.velRange[1]
+				nPre.aValue1 = nPre.aRange[0]
+				nPre.aValue2 = nPre.aRange[1]
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/insert/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(nPre)
+				})
+			},
+			sheetsPresetUpdate(nPre) {
+				nPre.posValue1 = nPre.posRange[0]
+				nPre.posValue2 = nPre.posRange[1]
+				nPre.velValue1 = nPre.velRange[0]
+				nPre.velValue2 = nPre.velRange[1]
+				nPre.aValue1 = nPre.aRange[0]
+				nPre.aValue2 = nPre.aRange[1]
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/update/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(nPre)
+				})
+			},
+			sheetsPresetDelete(name) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/delete/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: `{"name" : ` + `"` + name + `"}`
+				})
+			},
+			sheetsPaletteInsert(palette) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/insert/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(palette)
+				})
+			},
+			sheetsPaletteFetch(vm) {
+				console.log("Requesting Database")
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/fetch/')
+					.then(function (response) {
+						return response.json()
+					})
+					.then(function (data) {
+						const intermediate = data.map((row) => {
+							return [row.title, row.data]
+						});
+						vm.database.palettes = Object.fromEntries(intermediate)
+						console.log("Presets recieved: ")
+						console.log(vm.database)
+					})
+					.catch(function (err) {
+						console.log(err)
+					})
+			},
+			sheetsPaletteUpdate(palette) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/update/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(palette)
+				})
+			},
+			sheetsPaletteDelete(name) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/delete/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: `{"title" : ` + `"` + name + `"}`
+				})
+			},
+			connectWebsocket(vm, address) {
+				console.log("Starting connection to WebSocket Server: " + address)
+				vm.connection = new WebSocket(address)
+				vm.websocketState = 'Connecting'
+
+
+				vm.connection.onmessage = function (event) {
+					console.log("Recieved: " + event.data)
+				}
+
+				vm.connection.onopen = function (event) {
+					console.log(event.data)
+					console.log("Successfully connected to the ESP32 websocket server")
+					vm.websocketState = 'ConnectedAlert'
+					setTimeout(function () {
+						vm.websocketState = 'Connected'
+					}, 1000)
+				}
+
+				vm.connection.onerror = function (event) {
+					console.log("ERROR: " + event.data)
+				}
+
+				vm.connection.onclose = function (event) {
+					console.log(event.data)
+					console.log("Disconnected from ESP32 websocket server")
+					vm.websocketState = 'Failed'
+				}
+			},
+			sliderToSpeed(value) {
+				return Math.pow(value / 15, 3)
+			},
+			sliderToDensity(value) {
+				return Math.pow(value / 3, 3)
+			},
+			sendPalette(palette) {
+				var preparedPalette = {}
+				var vm = this
+				preparedPalette.colors = palette.map(convertToRGB)
+				preparedPalette.length = preparedPalette.colors.length;
+				this.sendMessage("palt: " + JSON.stringify(preparedPalette))
+			},
+			sendPreset(preset) {
+				var preparedPreset = {}
+				if (preset.generator == "Gradient") {
+					preparedPreset.generator = 0
+					preparedPreset.rate = this.sliderToSpeed(preset.rate)
+					preparedPreset.density = this.sliderToDensity(preset.density)
+				} else if (preset.generator == "Particle") {
+					preparedPreset.generator = 1
+					preparedPreset.timerDecay = preset.particleCount / preset.particleLife / 100
+					preparedPreset.particleDecay = 1 / preset.particleLife / 100
+					preparedPreset.range = preset.particleRange
+					preparedPreset.curveFactor = preset.curveFactor
+					preparedPreset.referenceDecay = Math.pow(preset.persistence, 1.0 / 100.0);
+
+					switch (preset.intensityMethod) {
+						case 'Fade Out':
+							preparedPreset.intensityMethod = 0
+							break
+						case 'Fade In':
+							preparedPreset.intensityMethod = 1
+							break
+						case 'Fade In and Out':
+							preparedPreset.intensityMethod = 2
+							break
+						case 'Pulse':
+							preparedPreset.intensityMethod = 3
+							break
+					}
+					preparedPreset.intensityValue = preset.intensityValue
+
+					switch (preset.colorMethod) {
+						case 'Age':
+							preparedPreset.colorMethod = 0
+							break
+						case 'Intensity':
+							preparedPreset.colorMethod = 1
+							break
+						case 'Influence':
+							preparedPreset.colorMethod = 2
+							break
+						case 'Random':
+							preparedPreset.colorMethod = 3
+							break
+					}
+
+					switch (preset.posMethod) {
+						case 'Set':
+							preparedPreset.posMethod = 0
+							break
+						case 'Random in Range':
+							preparedPreset.posMethod = 1
+							break
+					}
+					preparedPreset.posValue1 = preset.posRange[0]
+					preparedPreset.posValue2 = preset.posRange[1]
+
+					switch (preset.velMethod) {
+						case 'Set':
+							preparedPreset.velMethod = 0
+							break
+						case 'Random in Range':
+							preparedPreset.velMethod = 1
+							break
+					}
+					preparedPreset.velValue1 = preset.velRange[0]
+					preparedPreset.velValue2 = preset.velRange[1]
+
+					switch (preset.calculatedAttribute) {
+						case 'Position':
+							preparedPreset.calculatedAttribute = 0
+							break
+						case 'Velocity':
+							preparedPreset.calculatedAttribute = 1
+							break
+						case 'Acceleration':
+							preparedPreset.calculatedAttribute = 2
+							break
+					}
+					switch (preset.attributeMethod) {
+						case 'Constant':
+							preparedPreset.attributeMethod = 0
+							break
+						case 'Scaled over Life':
+							preparedPreset.attributeMethod = 1
+							break
+						case 'Attractor':
+							preparedPreset.attributeMethod = 2
+					}
+
+					preparedPreset.aValue1 = preset.aRange[0]
+					preparedPreset.aValue2 = preset.aRange[1]
+					preparedPreset.aValue3 = preset.aValue3
+				}
+
+				this.sendMessage("prst: " + JSON.stringify(preparedPreset))
+			},
+			setPreset(presetName) {
+				this.activePreset = presetName
+				this.sendPreset(this.database.presets[this.activePreset])
+			},
+			startPresetCreation() {
+				this.editingPreset = false
+				this.newPreset = {
+					rate: 50, //speed
+					density: 50, //density
+					name: "", //title
+					generator: "", //generator
+					particleCount: 0, //particle count
+					particleLife: 0, //particle life
+					particleRange: 0, //particle range
+					curveFactor: 5, //curve factor
+					persistence: 0, //persistence of vision
+					intensityMethod: 'Fade In and Out',    //intensity method
+					intensityValue: 1,  //intensity value
+					colorMethod: 'Influence', //color method
+					posMethod: 'Random in Range', //pos init method
+					posRange: [0, 900], //pos range
+					velMethod: 'Random in Range', //velocity init method
+					velRange: [-1, 1], //velocity range
+					calculatedAttribute: 'Acceleration', //calculated attribute
+					attributeMethod: 'Constant', //attribute method
+					aValue3: 0,
+					aRange: [-1, 1], //attribute range
+				}
+				console.log("hello")
+				this.presetCreationDialog = true
+			},
+			editPreset(presetName) {
+				console.log("Now Editing preset: " + presetName)
+				this.newPreset = JSON.parse(JSON.stringify(this.database.presets[presetName]))
+				// delete this.database.presets[presetName]
+				this.editingPreset = true
+				this.presetCreationDialog = true
+			},
+			createPreset(nPre) {
+				var tempTable = JSON.parse(JSON.stringify(nPre))
+				if (this.editingPreset) {
+					this.sheetsPresetUpdate(nPre)
+				} else {
+					this.sheetsPresetInsert(nPre)
+				}
+				this.database.presets[nPre.name] = tempTable
+				this.presetCreationDialog = false
+				this.editingPreset = false
+				this.setPreset(nPre.name)
+			},
+			deletePreset(preset) {
+				delete this.database.presets[preset.name]
+				this.presetDeletionDialog = false
+				this.editingPreset = false
+				this.sheetsPresetDelete(preset.name)
+			},
+			setPalette(paletteName) {
+				if (paletteName != '') {
+					this.activePalette = paletteName
+					this.sendPalette(this.database.palettes[paletteName])
+				}
+			},
+			startPaletteCreation() {
+				this.editingPalette = false
+				this.newPalette = { title: "", data: ["#FF0000", "#0000FF"] }
+				this.paletteCreationDialog = true
+			},
+			addColor() {
+				this.newPalette.data.push("#0000FF")
+			},
+			createPalette() {
+				if (this.editingPalette) {
+					this.sheetsPaletteUpdate(this.newPalette)
+				} else {
+					this.sheetsPaletteInsert(this.newPalette)
+				}
+				this.database.palettes[this.newPalette.title] = this.newPalette.data
+				this.paletteCreationDialog = false
+				this.editingPalette = false
+				this.setPalette(this.newPalette.title)
+			},
+			deletePalette(palette) {
+				this.sheetsPaletteDelete(palette.title)
+				delete this.database.palettes[palette.title]
+				this.paletteDeletionDialog = false
+				this.editingPalette = false
+			},
+			editPalette(paletteTitle) {
+				this.newPalette.title = paletteTitle
+				this.newPalette.data = this.database.palettes[paletteTitle]
+				this.editingPalette = true
+				this.paletteCreationDialog = true
+			},
+			sendMessage(message) {
+				console.log("Sent: " + message)
+				this.connection.send(message)
+			},
+			getGradientString(palette) {
+				return "linear-gradient(30deg," + palette.toString() + ")"
+			},
+			sendDelta() {
+				this.sendMessage("dlta: " + this.delta)
+			},
+			setBrightness() {
+				this.sendMessage("brgt: " + this.brightness / 100)
+				this.sendPalette(this.database.palettes[this.activePalette])
+			},
+		},
+		data() {
+			return {
+				generatorTypes: ['Gradient', 'Particle'],
+				intensityMethods: ['Fade In', 'Fade Out', 'Fade In and Out', 'Pulse'],
+				colorMethods: ['Age', 'Intensity', 'Influence', 'Random'],
+				attributeInitMethods: ['Set', 'Random in Range'],
+				AttributesToCalculate: ['Position', 'Velocity', 'Acceleration'],
+				AttributeCalcMethods: ['Constant', 'Scaled over Life', 'Attractor'],
+				delta: 1,
+				ESP32LED: false,
+				websocketAddress: "ws://192.168.0.21:1337",
+				websocketState: "Connecting",
+				connection: null,
+				newPreset: {},
+				newPalette: { title: "", data: ["#FF0000", "#0000FF"] },
+				colorIndex: 0,
+				presetCreationDialog: false,
+				presetDeletionDialog: false,
+				editingPreset: false,
+				paletteCreationDialog: false,
+				paletteDeletionDialog: false,
+				editingPalette: false,
+				activePreset: '',
+				activePalette: '',
+				activeTab: 'presets',
+				database: { presets: {}, palettes: {} },
+				brightness: 100,
+			}
+		}
+	})
+	const lerp = (x, y, a) => x * (1 - a) + y * a;
+	convertToRGB = function (hexString) {
+		if (hexString.length != 7) {
+			throw "Only six-digit hex colors are allowed.";
+		}
+
+		hexString = hexString.substring(1);
+		var aRgbHex = hexString.match(/.{1,2}/g);
+		var aRgb = [
+			parseInt(aRgbHex[0], 16),
+			parseInt(aRgbHex[1], 16),
+			parseInt(aRgbHex[2], 16)
+		];
+
+		return aRgb;
+	}
+
+</script>
