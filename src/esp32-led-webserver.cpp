@@ -10,16 +10,14 @@
 
 void setup()
 {
-  Serial.begin(115200);
-  webInit();
-  LEDSetup();
+	Serial.begin(115200);
+	webInit();
+	LEDSetup();
 }
 
 void loop()
 {
-
-  // Look for and handle WebSocket data
-
-  webLoop();
-  LEDLoop();
+	// Look for and handle WebSocket data
+	webLoop();
+	LEDLoop();
 }

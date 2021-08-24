@@ -38,7 +38,6 @@ struct Database
 
 	void updatePalette()
 	{
-		Serial.println(static_cast<float>(cyclesSincePalette) / static_cast<float>(lastCycles));
 		float blendPercent = static_cast<float>(cyclesSincePalette) / static_cast<float>(lastCycles);
 		blendPercent = blendPercent > 1 ? 1 : blendPercent;
 		palette.blend(lastPalette, nextPalette, blendPercent);
@@ -66,7 +65,6 @@ void JSONtoPalette(char *JSONstr)
 		DB.nextPalette.colors[i] = RgbColor(colors[i][0], colors[i][1], colors[i][2]);
 	}
 	DB.nextPalette.setBrightness(DB.brightness);
-	Serial.println(DB.nextPalette.len);
 	DB.lastCycles = max(min(DB.cyclesSincePalette, 50), 20);
 	DB.cyclesSincePalette = 0;
 }

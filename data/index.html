@@ -57,67 +57,77 @@
 
 						<v-card-actions>
 							<v-container>
-								<v-text-field label="Name" v-model="newPreset.t" :disabled=editingPreset>
+								<v-text-field label="Name" v-model="newPreset.name" :disabled=editingPreset>
 								</v-text-field>
-								<v-select label="Generator" :items="generatorTypes" v-model=newPreset.g></v-select>
-								<v-container v-show=newPreset.g=='Gradient'>
-									<v-slider v-model="newPreset.s" min=0 max=5 step=0.1 label="Speed"
+								<v-select label="Generator" :items="generatorTypes" v-model=newPreset.generator>
+								</v-select>
+								<v-container v-show=newPreset.generator=='Gradient'>
+									<v-slider v-model="newPreset.rate" min=0 max=5 step=0.1 label="Speed"
 										thumb-label="always"></v-slider>
-									<v-slider v-model=" newPreset.d" min=0 max=5 step=0.1 label="Density"
+									<v-slider v-model=" newPreset.density" min=0 max=5 step=0.1 label="Density"
 										thumb-label="always"></v-slider>
 								</v-container>
-								<v-container v-if=" newPreset.g=='Particle'">
-									<v-slider label=" Number of Particles" thumb-label="always" v-model="newPreset.pC"
-										min=1 max=300>
+								<v-container v-if=" newPreset.generator=='Particle'">
+									<v-slider label=" Number of Particles" thumb-label="always"
+										v-model="newPreset.particleCount" min=1 max=300>
 									</v-slider>
-									<v-slider label="Particle Lifetime" thumb-label="always" v-model="newPreset.pL"
+									<v-slider label="Particle Lifetime" thumb-label="always"
+										v-model="newPreset.particleLife" min=0.1 max=10 step=0.1>
+									</v-slider>
+									<v-slider label="Range of Influence" thumb-label="always"
+										v-model="newPreset.particleRange" min=1 max=300>
+									</v-slider>
+									<v-slider label="Curve Factor" thumb-label="always" v-model="newPreset.curveFactor"
 										min=0.1 max=10 step=0.1>
 									</v-slider>
-									<v-slider label="Range of Influence" thumb-label="always" v-model="newPreset.ptR"
-										min=1 max=300>
+									<v-slider label="Persistence" thumb-label="always" v-model="newPreset.persistence"
+										min=0 max=1 step=0.01>
 									</v-slider>
-									<v-slider label="Curve Factor" thumb-label="always" v-model="newPreset.cF" min=0.1
-										max=10 step=0.1>
-									</v-slider>
-									<v-slider label="Persistence" thumb-label="always" v-model="newPreset.pe" min=0
-										max=1 step=0.01>
-									</v-slider>
-									<v-select label="Intensity Method" :items="intensityMethods" v-model="newPreset.iM">
+									<v-select label="Intensity Method" :items="intensityMethods"
+										v-model="newPreset.intensityMethod">
 									</v-select>
-									<v-slider label="Number of Pulses" thumb-label="always" v-model="newPreset.iV" min=1
-										max=30 v-if="newPreset.iM == 'Pulse'"></v-slider>
-									<v-select label="Color Method" :items="colorMethods" v-model="newPreset.cM">
+									<v-slider label="Number of Pulses" thumb-label="always"
+										v-model="newPreset.intensityValue" min=1 max=30
+										v-if="newPreset.intensityMethod == 'Pulse'"></v-slider>
+									<v-select label="Color Method" :items="colorMethods"
+										v-model="newPreset.colorMethod">
 									</v-select>
 									<v-select label="Initial Position Method" :items="attributeInitMethods"
-										v-model="newPreset.pI">
+										v-model="newPreset.posMethod">
 									</v-select>
-									<v-slider label="Position" thumb-label="always" v-model="newPreset.pV" min=0 max=900
-										v-if="newPreset.pI == 'Set'"></v-slider>
-									<v-range-slider label="Position Range" thumb-label="always" v-model="newPreset.pR"
-										min=0 max=900 v-if="newPreset.pI == 'Random in Range'"></v-range-slider>
+									<v-slider label="Position" thumb-label="always" v-model="newPreset.posRange[0]"
+										min=0 max=900 v-if="newPreset.posMethod == 'Set'"></v-slider>
+									<v-range-slider label="Position Range" thumb-label="always"
+										v-model="newPreset.posRange" min=0 max=900
+										v-if="newPreset.posMethod == 'Random in Range'"></v-range-slider>
 									<v-select label="Initial Velocity Method" :items="attributeInitMethods"
-										v-model="newPreset.vI">
+										v-model="newPreset.velMethod">
 									</v-select>
-									<v-slider label="Velocity" thumb-label="always" v-model="newPreset.vV" min=-2 max=2
-										step=0.1 v-if="newPreset.vI == 'Set'"></v-slider>
-									<v-range-slider label="Velocity Range" thumb-label="always" v-model="newPreset.vR"
-										min=-5 max=5 step=0.1 v-if="newPreset.vI == 'Random in Range'"></v-range-slider>
+									<v-slider label="Velocity" thumb-label="always" v-model="newPreset.velValue" min=-2
+										max=2 step=0.1 v-if="newPreset.velMethod == 'Set'"></v-slider>
+									<v-range-slider label="Velocity Range" thumb-label="always"
+										v-model="newPreset.velRange" min=-5 max=5 step=0.1
+										v-if="newPreset.velMethod == 'Random in Range'"></v-range-slider>
 									<v-select label="Calculated Attribute" :items="AttributesToCalculate"
-										v-model=newPreset.cA>
+										v-model=newPreset.calculatedAttribute>
 									</v-select>
 									<v-select label="Calculation Method" :items="AttributeCalcMethods"
-										v-model=newPreset.aM>
+										v-model=newPreset.attributeMethod>
 									</v-select>
-									<v-slider v-if="newPreset.aM=='Constant' || newPreset.aM=='Attractor'"
-										label="Attribute Value" thumb-label="always" v-model=newPreset.aV1
-										:min="(newPreset.cA=='Position') ? 0 : -1"
-										:max="(newPreset.cA=='Position') ? 900 : 1" step=0.01></v-slider>
-									<v-range-slider v-if="newPreset.aM=='Scaled over Life'" label="Attribute Range"
-										thumb-label="always" v-model=newPreset.aR
-										:min="(newPreset.cA=='Position') ? 0 : -5"
-										:max="(newPreset.cA=='Position') ? 900 : 5" step=0.01></v-range-slider>
-									<v-slider v-if="newPreset.aM=='Attractor'" label="Attraction Amount"
-										thumb-label="always" v-model=newPreset.aV2 :min="-0.1" :max="0.1" step=0.001>
+									<v-slider
+										v-if="newPreset.attributeMethod=='Constant' || newPreset.attributeMethod=='Attractor'"
+										label="Attribute Value" thumb-label="always" v-model=newPreset.aRange[0]
+										:min="(newPreset.calculatedAttribute=='Position') ? 0 : -1"
+										:max="(newPreset.calculatedAttribute=='Position') ? 900 : 1" step=0.01>
+									</v-slider>
+									<v-range-slider v-if="newPreset.attributeMethod=='Scaled over Life'"
+										label="Attribute Range" thumb-label="always" v-model=newPreset.aRange
+										:min="(newPreset.calculatedAttribute=='Position') ? 0 : -5"
+										:max="(newPreset.calculatedAttribute=='Position') ? 900 : 5" step=0.01>
+									</v-range-slider>
+									<v-slider v-if="newPreset.attributeMethod=='Attractor'" label="Attraction Amount"
+										thumb-label="always" v-model=newPreset.aRange[1] :min="-0.1" :max="0.1"
+										step=0.001>
 									</v-slider>
 									</v-range-slider>
 								</v-container>
@@ -129,7 +139,7 @@
 										"Delete Preset" : "Cancel"}}</v-btn>
 									<v-spacer></v-spacer>
 									<v-btn color="primary" text @click="createPreset(newPreset)"
-										:disabled="newPreset.t?.length == 0">
+										:disabled="newPreset.name?.length == 0">
 										{{editingPreset ? "Modify Preset" : "Create Preset"}}
 									</v-btn>
 								</v-row>
@@ -243,14 +253,10 @@
 					<v-expansion-panel>
 						<v-expansion-panel-header>Advanced Settings</v-expansion-panel-header>
 						<v-expansion-panel-content>
-							<v-btn @click="requestDatabase(vm)">Request Database</v-btn>
-							<v-btn @click="sendDatabase()">Send Database</v-btn>
+							<v-btn @click="sheetsPresetFetch(vm)">Request Presets</v-btn>
+							<v-btn @click="sheetsPaletteFetch(vm)">Request Palettes</v-btn>
 							<v-btn @click="connectWebsocket(vm, websocketAddress)">Manual Connect</v-btn>
 							<v-text-field label="Websocket Address" v-model="websocketAddress"></v-text-field>
-							<v-btn><a download href="./database.json">Download Database</a></v-btn>
-							<v-btn @click="fileToDatabase">Upload Database</v-btn>
-							<v-file-input @change="fileInputChanged" accept=".json" label="Database File">
-							</v-file-input>
 						</v-expansion-panel-content>
 					</v-expansion-panel>
 				</v-expansion-panels>
@@ -291,16 +297,120 @@
 		components: {
 
 		},
-		created() {
+		async created() {
 			this.$vuetify.theme.dark = true
 			this.vm = this
-			this.requestDatabase(this.vm)
+			this.sheetsPresetFetch(this.vm)
+			this.sheetsPaletteFetch(this.vm)
 
 			this.connectWebsocket(this.vm, "ws://192.168.1.3:1337")
-
-
 		},
 		methods: {
+			sheetsPresetFetch(vm) {
+				console.log("Requesting Database")
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/fetch/')
+					.then(function (response) {
+						return response.json()
+					})
+					.then(function (data) {
+						const intermediate = data.map((row) => {
+							row.posRange = [row.posValue1, row.posValue2];
+							row.velRange = [row.velValue1, row.velValue2];
+							row.aRange = [row.aValue1, row.aValue2];
+							return [row.name, row]
+						});
+						vm.database.presets = Object.fromEntries(intermediate)
+						console.log("Presets recieved: ")
+						console.log(vm.database)
+					})
+					.catch(function (err) {
+						console.log(err)
+					})
+			},
+			sheetsPresetInsert(nPre) {
+				nPre.posValue1 = nPre.posRange[0]
+				nPre.posValue2 = nPre.posRange[1]
+				nPre.velValue1 = nPre.velRange[0]
+				nPre.velValue2 = nPre.velRange[1]
+				nPre.aValue1 = nPre.aRange[0]
+				nPre.aValue2 = nPre.aRange[1]
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/insert/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(nPre)
+				})
+			},
+			sheetsPresetUpdate(nPre) {
+				nPre.posValue1 = nPre.posRange[0]
+				nPre.posValue2 = nPre.posRange[1]
+				nPre.velValue1 = nPre.velRange[0]
+				nPre.velValue2 = nPre.velRange[1]
+				nPre.aValue1 = nPre.aRange[0]
+				nPre.aValue2 = nPre.aRange[1]
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/update/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(nPre)
+				})
+			},
+			sheetsPresetDelete(name) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/delete/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: `{"name" : ` + `"` + name + `"}`
+				})
+			},
+			sheetsPaletteInsert(palette) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/insert/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(palette)
+				})
+			},
+			sheetsPaletteFetch(vm) {
+				console.log("Requesting Database")
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/fetch/')
+					.then(function (response) {
+						return response.json()
+					})
+					.then(function (data) {
+						const intermediate = data.map((row) => {
+							return [row.title, row.data]
+						});
+						vm.database.palettes = Object.fromEntries(intermediate)
+						console.log("Presets recieved: ")
+						console.log(vm.database)
+					})
+					.catch(function (err) {
+						console.log(err)
+					})
+			},
+			sheetsPaletteUpdate(palette) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/update/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(palette)
+				})
+			},
+			sheetsPaletteDelete(name) {
+				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/delete/', {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: `{"title" : ` + `"` + name + `"}`
+				})
+			},
 			connectWebsocket(vm, address) {
 				console.log("Starting connection to WebSocket Server: " + address)
 				vm.connection = new WebSocket(address)
@@ -336,24 +446,6 @@
 			sliderToDensity(value) {
 				return Math.pow(value / 3, 3)
 			},
-			sendDatabase() {
-				this.sendMessage("data: " + JSON.stringify(this.database))
-			},
-			requestDatabase(vm) {
-				console.log("Requesting Database")
-				fetch('database.json')
-					.then(function (response) {
-						return response.json()
-					})
-					.then(function (data) {
-						vm.database = data
-						console.log("Database recieved: ")
-						console.log(vm.database)
-					})
-					.catch(function (err) {
-						console.log(err)
-					})
-			},
 			sendPalette(palette) {
 				var preparedPalette = {}
 				var vm = this
@@ -363,18 +455,19 @@
 			},
 			sendPreset(preset) {
 				var preparedPreset = {}
-				if (preset.g == "Gradient") {
+				if (preset.generator == "Gradient") {
 					preparedPreset.generator = 0
-					preparedPreset.rate = this.sliderToSpeed(preset.s)
-					preparedPreset.density = this.sliderToDensity(preset.d)
-				} else if (preset.g == "Particle") {
+					preparedPreset.rate = this.sliderToSpeed(preset.rate)
+					preparedPreset.density = this.sliderToDensity(preset.density)
+				} else if (preset.generator == "Particle") {
 					preparedPreset.generator = 1
-					preparedPreset.timerDecay = preset.pC / preset.pL / 100
-					preparedPreset.particleDecay = 1 / preset.pL / 100
-					preparedPreset.range = preset.ptR
-					preparedPreset.curveFactor = preset.cF
-					preparedPreset.referenceDecay = Math.pow(preset.pe, 1.0 / 100.0);
-					switch (preset.iM) {
+					preparedPreset.timerDecay = preset.particleCount / preset.particleLife / 100
+					preparedPreset.particleDecay = 1 / preset.particleLife / 100
+					preparedPreset.range = preset.particleRange
+					preparedPreset.curveFactor = preset.curveFactor
+					preparedPreset.referenceDecay = Math.pow(preset.persistence, 1.0 / 100.0);
+
+					switch (preset.intensityMethod) {
 						case 'Fade Out':
 							preparedPreset.intensityMethod = 0
 							break
@@ -388,8 +481,9 @@
 							preparedPreset.intensityMethod = 3
 							break
 					}
-					preparedPreset.intensityValue = preset.iV
-					switch (preset.cM) {
+					preparedPreset.intensityValue = preset.intensityValue
+
+					switch (preset.colorMethod) {
 						case 'Age':
 							preparedPreset.colorMethod = 0
 							break
@@ -403,31 +497,30 @@
 							preparedPreset.colorMethod = 3
 							break
 					}
-					switch (preset.pI) {
+
+					switch (preset.posMethod) {
 						case 'Set':
 							preparedPreset.posMethod = 0
-							preparedPreset.posValue1 = preset.pV
-							preparedPreset.posValue2 = 0
 							break
 						case 'Random in Range':
 							preparedPreset.posMethod = 1
-							preparedPreset.posValue1 = preset.pR[0]
-							preparedPreset.posValue2 = preset.pR[1]
 							break
 					}
-					switch (preset.vI) {
+					preparedPreset.posValue1 = preset.posRange[0]
+					preparedPreset.posValue2 = preset.posRange[1]
+
+					switch (preset.velMethod) {
 						case 'Set':
 							preparedPreset.velMethod = 0
-							preparedPreset.velValue1 = preset.vV
-							preparedPreset.velValue2 = 0
 							break
 						case 'Random in Range':
 							preparedPreset.velMethod = 1
-							preparedPreset.velValue1 = preset.vR[0]
-							preparedPreset.velValue2 = preset.vR[1]
 							break
 					}
-					switch (preset.cA) {
+					preparedPreset.velValue1 = preset.velRange[0]
+					preparedPreset.velValue2 = preset.velRange[1]
+
+					switch (preset.calculatedAttribute) {
 						case 'Position':
 							preparedPreset.calculatedAttribute = 0
 							break
@@ -438,26 +531,20 @@
 							preparedPreset.calculatedAttribute = 2
 							break
 					}
-					switch (preset.aM) {
+					switch (preset.attributeMethod) {
 						case 'Constant':
 							preparedPreset.attributeMethod = 0
-							preparedPreset.aValue1 = preset.aV1
-							preparedPreset.aValue2 = 0
-							preparedPreset.aValue3 = 0
 							break
 						case 'Scaled over Life':
 							preparedPreset.attributeMethod = 1
-							preparedPreset.aValue1 = preset.aR[0]
-							preparedPreset.aValue2 = preset.aR[1]
-							preparedPreset.aValue3 = 0
 							break
 						case 'Attractor':
 							preparedPreset.attributeMethod = 2
-							preparedPreset.aValue1 = preset.aV1
-							preparedPreset.aValue2 = preset.aV2
-							preparedPreset.aValue3 = 0
 					}
 
+					preparedPreset.aValue1 = preset.aRange[0]
+					preparedPreset.aValue2 = preset.aRange[1]
+					preparedPreset.aValue3 = preset.aValue3
 				}
 
 				this.sendMessage("prst: " + JSON.stringify(preparedPreset))
@@ -469,30 +556,26 @@
 			startPresetCreation() {
 				this.editingPreset = false
 				this.newPreset = {
-					s: 50, //speed
-					d: 50, //density
-					t: "", //title
-					g: "", //generator
-					pC: 0, //particle count
-					pL: 0, //particle life
-					ptR: 0, //particle range
-					cF: 5, //curve factor
-					pe: 0, //persistence of vision
-					iM: '',    //intensity method
-					iV: 1,  //intensity value
-					cM: '', //color method
-					pI: '', //pos init method
-					pV: 0, //pos value
-					pR: [-1, 1], //pos range
-					vI: '', //velocity init method
-					vV: 0, //velocity value
-					vR: [-1, 1], //velocity range
-					cA: '', //calculated attribute
-					aM: '', //attribute method
-					aV1: 0, //attribute value
-					aV2: 0,
-					aV3: 0,
-					aR: [-1, 1], //attribute range
+					rate: 50, //speed
+					density: 50, //density
+					name: "", //title
+					generator: "", //generator
+					particleCount: 0, //particle count
+					particleLife: 0, //particle life
+					particleRange: 0, //particle range
+					curveFactor: 5, //curve factor
+					persistence: 0, //persistence of vision
+					intensityMethod: 'Fade In and Out',    //intensity method
+					intensityValue: 1,  //intensity value
+					colorMethod: 'Influence', //color method
+					posMethod: 'Random in Range', //pos init method
+					posRange: [0, 900], //pos range
+					velMethod: 'Random in Range', //velocity init method
+					velRange: [-1, 1], //velocity range
+					calculatedAttribute: 'Acceleration', //calculated attribute
+					attributeMethod: 'Constant', //attribute method
+					aValue3: 0,
+					aRange: [-1, 1], //attribute range
 				}
 				console.log("hello")
 				this.presetCreationDialog = true
@@ -506,17 +589,21 @@
 			},
 			createPreset(nPre) {
 				var tempTable = JSON.parse(JSON.stringify(nPre))
-				this.database.presets[nPre.t] = tempTable
+				if (this.editingPreset) {
+					this.sheetsPresetUpdate(nPre)
+				} else {
+					this.sheetsPresetInsert(nPre)
+				}
+				this.database.presets[nPre.name] = tempTable
 				this.presetCreationDialog = false
 				this.editingPreset = false
-				this.setPreset(nPre.t)
-				this.sendDatabase()
+				this.setPreset(nPre.name)
 			},
 			deletePreset(preset) {
-				delete this.database.presets[preset.t]
+				delete this.database.presets[preset.name]
 				this.presetDeletionDialog = false
 				this.editingPreset = false
-				this.sendDatabase()
+				this.sheetsPresetDelete(preset.name)
 			},
 			setPalette(paletteName) {
 				if (paletteName != '') {
@@ -533,17 +620,21 @@
 				this.newPalette.data.push("#0000FF")
 			},
 			createPalette() {
+				if (this.editingPalette) {
+					this.sheetsPaletteUpdate(this.newPalette)
+				} else {
+					this.sheetsPaletteInsert(this.newPalette)
+				}
 				this.database.palettes[this.newPalette.title] = this.newPalette.data
 				this.paletteCreationDialog = false
 				this.editingPalette = false
 				this.setPalette(this.newPalette.title)
-				this.sendDatabase()
 			},
 			deletePalette(palette) {
+				this.sheetsPaletteDelete(palette.title)
 				delete this.database.palettes[palette.title]
 				this.paletteDeletionDialog = false
 				this.editingPalette = false
-				this.sendDatabase()
 			},
 			editPalette(paletteTitle) {
 				this.newPalette.title = paletteTitle
@@ -564,19 +655,6 @@
 			setBrightness() {
 				this.sendMessage("brgt: " + this.brightness / 100)
 				this.sendPalette(this.database.palettes[this.activePalette])
-			},
-			fileInputChanged(file) {
-				var vm = this
-				file.text().then(text => vm.databaseString = text)
-			},
-			fileToDatabase() {
-				if (this.databaseString.length != 0) {
-					var jsonFromFile = this.databaseString.substring(this.databaseString.indexOf("<body>") + 6, this.databaseString.indexOf("</body>"))
-					this.database = JSON.parse(jsonFromFile)
-				}
-				else {
-					console.log("Select a file")
-				}
 			},
 		},
 		data() {
@@ -605,7 +683,6 @@
 				activePalette: '',
 				activeTab: 'presets',
 				database: { presets: {}, palettes: {} },
-				databaseString: "",
 				brightness: 100,
 			}
 		}

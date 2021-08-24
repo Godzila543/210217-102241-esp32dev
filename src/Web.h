@@ -1,8 +1,8 @@
 // Constants
 // const char *ssid = "NETGEAR80";
 // const char *password = "thelmarocks";
-const char *ssid = "MONKEY";
-const char *password = "teddybear";
+const char *ssid = "NETGEAR80";
+const char *password = "thelmarocks";
 const int dns_port = 53;
 const int http_port = 80;
 const int ws_port = 1337;
