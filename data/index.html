@@ -307,7 +307,7 @@
 		},
 		methods: {
 			sheetsPresetFetch(vm) {
-				console.log("Requesting Database")
+				console.log("Requesting Presets")
 				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/preset/fetch/')
 					.then(function (response) {
 						return response.json()
@@ -376,7 +376,7 @@
 				})
 			},
 			sheetsPaletteFetch(vm) {
-				console.log("Requesting Database")
+				console.log("Requesting Palettes")
 				fetch('https://colinbrown.api.stdlib.com/sheets-led@1.0.0/palette/fetch/')
 					.then(function (response) {
 						return response.json()
