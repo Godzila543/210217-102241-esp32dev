@@ -102,26 +102,25 @@ void onIndexRequest(AsyncWebServerRequest *request)
 	IPAddress remote_ip = request->client()->remoteIP();
 	Serial.println("[" + remote_ip.toString() +
 				   "] HTTP GET request of " + request->url());
-	request->send(SPIFFS, "/index.html", "text/html");
-}
 
-void onDataRequest(AsyncWebServerRequest *request)
-{
-	IPAddress remote_ip = request->client()->remoteIP();
-	Serial.println("[" + remote_ip.toString() +
-				   "] HTTP GET request of " + request->url());
-	request->send(SPIFFS, "/database.json", "text/html");
-}
+	HTTPClient http;
 
-// Callback: send style sheet
-void onCSSRequest(AsyncWebServerRequest *request)
-{
-	IPAddress remote_ip = request->client()->remoteIP();
-	Serial.println("[" + remote_ip.toString() +
-				   "] HTTP GET request of " + request->url());
-	request->send(SPIFFS, "/style.css", "text/css");
-}
+	http.begin("https://godzila543.github.io/LED");
+	int httpResponseCode = http.GET();
 
+	if (httpResponseCode>0) {
+		Serial.print("HTTP Response code: ");
+		Serial.println(httpResponseCode);
+		String payload = http.getString();
+		request->send_P(200, "text/html", payload.c_str());
+	}
+	else {
+		Serial.print("Error code: ");
+		Serial.println(httpResponseCode);
+	}
+	// Free resources
+	http.end();
+}
 // Callback: send 404 if requested file does not exist
 void onPageNotFound(AsyncWebServerRequest *request)
 {
@@ -162,12 +161,6 @@ void webInit()
 
 	// On HTTP request for root, provide index.html file
 	server.on("/", HTTP_GET, onIndexRequest);
-
-	// On HTTP request for style sheet, provide style.css
-	server.on("/style.css", HTTP_GET, onCSSRequest);
-
-	// On HTTP request for database, provide index.html file
-	server.on("/database.json", HTTP_GET, onDataRequest);
 
 	// Handle requests for pages that do not exist
 	server.onNotFound(onPageNotFound);
