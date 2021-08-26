@@ -3,8 +3,6 @@
 // const char *password = "thelmarocks";
 const char *ssid = "NETGEAR80";
 const char *password = "thelmarocks";
-const int dns_port = 53;
-const int http_port = 80;
 const int ws_port = 1337;
 
 AsyncWebServer server(80);
@@ -108,13 +106,15 @@ void onIndexRequest(AsyncWebServerRequest *request)
 	http.begin("https://godzila543.github.io/LED");
 	int httpResponseCode = http.GET();
 
-	if (httpResponseCode>0) {
+	if (httpResponseCode > 0)
+	{
 		Serial.print("HTTP Response code: ");
 		Serial.println(httpResponseCode);
 		String payload = http.getString();
 		request->send_P(200, "text/html", payload.c_str());
 	}
-	else {
+	else
+	{
 		Serial.print("Error code: ");
 		Serial.println(httpResponseCode);
 	}
@@ -143,10 +143,12 @@ void webInit()
 
 	Serial.print("Connecting to ");
 	Serial.println(ssid);
-	IPAddress local_IP(192, 168, 1, 3);
-	IPAddress gateway(192, 168, 1, 1);
-	IPAddress subnet(255, 255, 0, 0);
-	WiFi.config(local_IP, gateway, subnet);
+	IPAddress local_IP(192, 168, 0, 3);
+	IPAddress gateway(192, 168, 0, 1);
+	IPAddress subnet(255, 255, 255, 0);
+	IPAddress dns1(8, 8, 8, 8);
+	IPAddress dns2(8, 8, 4, 4);
+	WiFi.config(local_IP, gateway, subnet, dns1, dns2);
 	WiFi.begin(ssid, password);
 	while (WiFi.status() != WL_CONNECTED)
 	{
