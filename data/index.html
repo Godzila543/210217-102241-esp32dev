@@ -103,8 +103,8 @@
 									<v-select label="Initial Velocity Method" :items="attributeInitMethods"
 										v-model="newPreset.velMethod">
 									</v-select>
-									<v-slider label="Velocity" thumb-label="always" v-model="newPreset.velValue" min=-2
-										max=2 step=0.1 v-if="newPreset.velMethod == 'Set'"></v-slider>
+									<v-slider label="Velocity" thumb-label="always" v-model="newPreset.velRange[0]"
+										min=-2 max=2 step=0.1 v-if="newPreset.velMethod == 'Set'"></v-slider>
 									<v-range-slider label="Velocity Range" thumb-label="always"
 										v-model="newPreset.velRange" min=-5 max=5 step=0.1
 										v-if="newPreset.velMethod == 'Random in Range'"></v-range-slider>
