@@ -1,6 +1,5 @@
 #define NUM_PARTICLES 300
 #define PRECALC_STEPS 3
-#define NUM_LEDS 900
 //atribute initiation method, used to determine the initial positions, velocities, and accelerations of particles
 enum class AttrInitMethod
 {

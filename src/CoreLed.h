@@ -1,22 +1,7 @@
-#define strip_PixelCount 300
+#define strip_PixelCount 600
 #define strip1_PixelPin 25
-#define strip2_PixelPin 26
-#define strip3_PixelPin 27
-
-#define totalPixelCount 900
 
 NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> strip1(strip_PixelCount, strip1_PixelPin);
-NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> strip2(strip_PixelCount, strip2_PixelPin);
-NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip3(strip_PixelCount, strip3_PixelPin);
-
-NeoBuffer<NeoBufferMethod<NeoGrbFeature>> strip0(totalPixelCount, 1, NULL);
-
-NeoTopology<RowMajorLayout> topo(totalPixelCount, 1);
-uint16_t LayoutMap(int16_t x, int16_t y)
-{
-	return topo.MapProbe(x, y);
-}
-
 enum genType
 {
 	GRADIENT,
