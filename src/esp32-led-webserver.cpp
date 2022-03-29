@@ -1,9 +1,4 @@
 #include <Arduino.h>
-#include <WiFi.h>
-#include <SPIFFS.h>
-#include <ESPAsyncWebServer.h>
-#include <HTTPClient.h>
-#include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <NeoPixelBus.h>
 #include "Led.h"
@@ -18,7 +13,5 @@ void setup()
 
 void loop()
 {
-	// Look for and handle WebSocket data
-	webLoop();
 	LEDLoop();
 }
