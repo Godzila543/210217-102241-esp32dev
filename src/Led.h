@@ -46,7 +46,7 @@ void LEDSetup()
 	strip1.Show();
 
 	// set the entire buffer to black color to set off for all pixels:
-	//strip0.ClearTo(black);
+	// strip0.ClearTo(black);
 }
 
 void LEDLoop()
@@ -55,5 +55,4 @@ void LEDLoop()
 	updateStrip(DB.delta);
 	calculateStrip();
 	strip1.Show();
-	Serial.println(strip1.GetPixelColor(0).R);
 }
