@@ -4,7 +4,7 @@
 static NimBLEServer *pServer;
 
 /** Handler class for characteristic actions */
-class GeneratorCallbacks : public NimBLECharacteristicCallbacks
+class GeneratorCallback : public NimBLECharacteristicCallbacks
 {
 	void onWrite(NimBLECharacteristic *pCharacteristic)
 	{
@@ -15,7 +15,7 @@ class GeneratorCallbacks : public NimBLECharacteristicCallbacks
 	};
 };
 
-class PaletteCallbacks : public NimBLECharacteristicCallbacks
+class PaletteCallback : public NimBLECharacteristicCallbacks
 {
 	void onWrite(NimBLECharacteristic *pCharacteristic)
 	{
@@ -26,8 +26,20 @@ class PaletteCallbacks : public NimBLECharacteristicCallbacks
 	};
 };
 
-static GeneratorCallbacks genCallbacks;
-static PaletteCallbacks palCallbacks;
+class BrightnessCallback : public NimBLECharacteristicCallbacks
+{
+	void onWrite(NimBLECharacteristic *pCharacteristic)
+	{
+		Serial.print(pCharacteristic->getUUID().toString().c_str());
+		Serial.print(": onWrite(), value: ");
+		Serial.println(pCharacteristic->getValue().c_str());
+		JSONtoBrightness((char *)pCharacteristic->getValue().c_str());
+	};
+};
+
+static GeneratorCallback genCallbacks;
+static PaletteCallback palCallbacks;
+static BrightnessCallback brtCallbacks;
 
 void webInit()
 {
@@ -47,16 +59,19 @@ void webInit()
 
 	NimBLECharacteristic *pGenCharacteristic = pService->createCharacteristic(
 		"6EEE",
-		NIMBLE_PROPERTY::READ |
-			NIMBLE_PROPERTY::WRITE);
+		NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
 
 	NimBLECharacteristic *pPalCharacteristic = pService->createCharacteristic(
 		"9A11",
-		NIMBLE_PROPERTY::READ |
-			NIMBLE_PROPERTY::WRITE);
+		NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
+
+	NimBLECharacteristic *pBrtCharacteristic = pService->createCharacteristic(
+		"B177",
+		NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
 
 	pGenCharacteristic->setCallbacks(&genCallbacks);
 	pPalCharacteristic->setCallbacks(&palCallbacks);
+	pBrtCharacteristic->setCallbacks(&brtCallbacks);
 
 	pService->start();
 
