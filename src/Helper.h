@@ -1,12 +1,13 @@
 struct Palette
 {
-	uint8_t len = 2;
+	uint8_t len = 8;
 	RgbColor colors[8] = {RgbColor(255, 0, 0), RgbColor(0, 255, 255)}; // max 8 colors
+	RgbColor brightnessAdjustedColors[8] = {RgbColor(255, 0, 0), RgbColor(0, 255, 255)};
 
 	RgbColor getColor(float pos)
 	{
 		pos = fmod(pos, 1);
-		return RgbColor::LinearBlend(colors[int(pos * (len - 1))], colors[int(pos * (len - 1)) + 1], fmod(pos * (len - 1), 1));
+		return RgbColor::LinearBlend(brightnessAdjustedColors[int(pos * (len - 1))], brightnessAdjustedColors[int(pos * (len - 1)) + 1], fmod(pos * (len - 1), 1));
 	}
 	void blend(Palette blendFrom, Palette blendTo, float c)
 	{
@@ -16,7 +17,7 @@ struct Palette
 	void setBrightness(float bright)
 	{
 		for (int i = 0; i < len; i++)
-			colors[i] = RgbColor::LinearBlend(RgbColor(0), colors[i], bright);
+			brightnessAdjustedColors[i] = RgbColor::LinearBlend(RgbColor(0), colors[i], bright);
 	}
 };
 
