@@ -1,6 +1,6 @@
 struct Palette
 {
-	uint8_t len = 2;
+	uint8_t len = 8;
 	RgbColor colors[8] = {RgbColor(255, 0, 0), RgbColor(0, 255, 255)}; // max 8 colors
 	RgbColor brightnessAdjustedColors[8] = {RgbColor(255, 0, 0), RgbColor(0, 255, 255)};
 

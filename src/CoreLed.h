@@ -10,23 +10,24 @@ enum genType
 
 struct Database
 {
-	GradientGenerator gradientGenerator; // Database will only store the active preset and palette. It is up to the browser to send the correct information
+	GradientGenerator gradientGenerator; //  Database will only store the active preset and palette. It is up to the browser to send the correct information
 	ParticleGenerator particleGenerator;
 	Palette palette;
 	Palette lastPalette;
 	Palette nextPalette;
 	genType gen = PARTICLE;
 	float brightness = 1;
+	float trueBrightness = 1;
 	float delta = 1;
 	int cyclesSincePalette = 0;
-	int lastCycles = 50;
 
 	void updatePalette()
 	{
-		float blendPercent = static_cast<float>(cyclesSincePalette) / static_cast<float>(lastCycles);
+		float blendPercent = static_cast<float>(cyclesSincePalette) / 100.0;
+		trueBrightness += (brightness - trueBrightness) / 30.0;
 		blendPercent = blendPercent > 1 ? 1 : blendPercent;
 		palette.blend(lastPalette, nextPalette, blendPercent);
-		palette.setBrightness(brightness);
+		palette.setBrightness(trueBrightness);
 		particleGenerator.setPalette(palette); // FIXME this some dumb shit
 		cyclesSincePalette++;
 	}
@@ -41,23 +42,25 @@ void JSONtoPalette(char *JSONstr)
 {
 	DynamicJsonDocument doc(512);
 	deserializeJson(doc, JSONstr);
-	DB.nextPalette.len = doc["length"];
 
+	Palette tmpPalette;
+	tmpPalette.len = doc["length"];
 	JsonArray colors = doc["colors"].as<JsonArray>();
+	for (int i = 0; i < tmpPalette.len; i++)
+	{
+		tmpPalette.colors[i] = RgbColor(colors[i][0], colors[i][1], colors[i][2]);
+	}
+	tmpPalette.setBrightness(1.0);
 	for (int i = 0; i < DB.nextPalette.len; i++)
 	{
-		DB.nextPalette.brightnessAdjustedColors[i] = RgbColor(colors[i][0], colors[i][1], colors[i][2]);
+		DB.nextPalette.colors[i] = tmpPalette.getColor(0.999 * ((float)i) / ((float)(DB.nextPalette.len - 1)));
 	}
 
-	DB.lastPalette.len = DB.nextPalette.len;
-	DB.palette.setBrightness(1.0);
 	for (int i = 0; i < DB.lastPalette.len; i++)
 	{
-		DB.lastPalette.brightnessAdjustedColors[i] = DB.palette.getColor((float)i / (DB.lastPalette.len - 1.0));
+		DB.lastPalette.colors[i] = DB.palette.colors[i];
 	}
 
-	DB.palette.len = doc["length"];
-	DB.lastCycles = max(min(DB.cyclesSincePalette, 50), 20);
 	DB.cyclesSincePalette = 0;
 }
 

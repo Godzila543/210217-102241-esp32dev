@@ -1,4 +1,3 @@
-
 #include <NimBLEDevice.h>
 
 static NimBLEServer *pServer;
