@@ -12,6 +12,7 @@ void Database::updatePalette()
 
 void Database::JSONtoPreset(char *JSONstr)
 {
+    store.putString("preset", JSONstr);
     DynamicJsonDocument doc(2048);
     deserializeJson(doc, JSONstr);
     if (doc["generator"] == 0)
@@ -48,6 +49,7 @@ void Database::JSONtoPreset(char *JSONstr)
 }
 void Database::JSONtoPalette(char *JSONstr)
 {
+    store.putString("palette", JSONstr);
     lastPalette = palette;
     nextPalette = Palette(JSONstr);
     cyclesSincePalette = 0;
@@ -55,6 +57,7 @@ void Database::JSONtoPalette(char *JSONstr)
 
 void Database::JSONtoBrightness(char *JSONstr)
 {
+    store.putString("brightness", JSONstr);
     DynamicJsonDocument doc(128);
     deserializeJson(doc, JSONstr);
     brightness = doc["brightness"];
@@ -73,4 +76,18 @@ Database::Database()
     delta = 1;
     cyclesSincePalette = 0;
     generator = &gradientGenerator;
+
+    store.begin("database", false);
+    if (store.getString("preset").length() > 0)
+    {
+        JSONtoPreset((char *)store.getString("preset").c_str());
+    }
+    if (store.getString("palette").length() > 0)
+    {
+        JSONtoPalette((char *)store.getString("palette").c_str());
+    }
+    if (store.getString("brightness").length() > 0)
+    {
+        JSONtoBrightness((char *)store.getString("brightness").c_str());
+    }
 }

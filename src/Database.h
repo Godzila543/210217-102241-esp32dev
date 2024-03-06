@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Preferences.h"
 #include "Generator.h"
 #include <ArduinoJson.h>
 #include "Particle.h"
@@ -14,6 +15,7 @@ private:
     Palette nextPalette;
     float brightness;
     int cyclesSincePalette;
+    Preferences store;
     Database(); // Private constructor to prevent instantiation
     Database(const Database &) = delete;
     Database &operator=(const Database &) = delete;
