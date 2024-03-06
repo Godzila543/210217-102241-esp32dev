@@ -1,9 +1,9 @@
-class Generator {
-  public:
-    void update(float delta) {
-      return;
-    }
-    RgbColor calculatePixel(int index) {
-      return RgbColor(0, 0, 0);
-    }
+#pragma once
+
+#include "Palette.h"
+class Generator
+{
+public:
+  virtual void update(float delta, Palette p) = 0;
+  virtual RgbColor calculatePixel(int index) = 0;
 };
