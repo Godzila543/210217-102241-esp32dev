@@ -1,4 +1,7 @@
+#pragma once
+
 #include <NimBLEDevice.h>
+#include "Database.h"
 
 static NimBLEServer *pServer;
 
@@ -10,7 +13,7 @@ class GeneratorCallback : public NimBLECharacteristicCallbacks
 		Serial.print(pCharacteristic->getUUID().toString().c_str());
 		Serial.print(": onWrite(), value: ");
 		Serial.println(pCharacteristic->getValue().c_str());
-		JSONtoPreset((char *)pCharacteristic->getValue().c_str());
+		Database::getInstance().JSONtoPreset((char *)pCharacteristic->getValue().c_str());
 	};
 };
 
@@ -21,7 +24,7 @@ class PaletteCallback : public NimBLECharacteristicCallbacks
 		Serial.print(pCharacteristic->getUUID().toString().c_str());
 		Serial.print(": onWrite(), value: ");
 		Serial.println(pCharacteristic->getValue().c_str());
-		JSONtoPalette((char *)pCharacteristic->getValue().c_str());
+		Database::getInstance().JSONtoPalette((char *)pCharacteristic->getValue().c_str());
 	};
 };
 
@@ -32,7 +35,7 @@ class BrightnessCallback : public NimBLECharacteristicCallbacks
 		Serial.print(pCharacteristic->getUUID().toString().c_str());
 		Serial.print(": onWrite(), value: ");
 		Serial.println(pCharacteristic->getValue().c_str());
-		JSONtoBrightness((char *)pCharacteristic->getValue().c_str());
+		Database::getInstance().JSONtoBrightness((char *)pCharacteristic->getValue().c_str());
 	};
 };
 
